@@ -9,7 +9,7 @@ import { MoveBack, MoveMenu, MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoo
          MoveRow1, MoveRow2, MoveRow3, MoveRow4, MoveKnob1, MoveKnob2, MoveKnob3, MoveKnob4,
          MoveKnob5, MoveKnob6, MoveKnob7, MoveKnob8, MoveMaster, MoveCCButtons,
          White, Black, BrightRed, BrightGreen, OrangeRed, Cyan, DarkGrey, WhiteLedDim, WhiteLedBright,
-         colourNames, MovePads} from '/data/UserData/move-anything/shared/constants.mjs';
+         colourNames, MovePads, midiNotes} from '/data/UserData/move-anything/shared/constants.mjs';
 import { drawMenuHeader, showOverlay, tickOverlay, drawOverlay,
          dismissOverlayOnInput } from '/data/UserData/move-anything/shared/menu_layout.mjs';
 import { createTextScroller } from '/data/UserData/move-anything/shared/text_scroll.mjs';
@@ -199,7 +199,7 @@ function showPadOverlay(padNum, vel) {
 
     const note = banks[selectedBank].pads[padNum].note;
 
-    showOverlay(`Note: ${note} ${name} `, vel);
+    showOverlay(`Note: ${midiNotes[note]} (${note})`, `${vel} ${name}`);
     return true;
 }
 
@@ -327,7 +327,8 @@ function getSettingsItems() {
                 set: (v) => { banks[selectedBank].pads[selectedPad].note = v; },
                 min: 0,
                 max: 127,
-                step: 1
+                step: 1,
+                format: (v) => `${midiNotes[v]} (${v})`
             }),
             createValue('Pad Level', {
                 get: () => banks[selectedBank].pads[selectedPad].level || 100,
@@ -566,6 +567,11 @@ function handleCC(cc, val) {
     /* Other buttons send midi */
     for (let i = 0; i < ALL_BUTTONS.length; i++) {
         if (cc === ALL_BUTTONS[i]) {
+            if (viewMode === VIEW_SETTINGS && selectedButton != i) {
+                settingsMenuState.editing = false;
+                disableLEDUpdate = false;
+                settingsMenuStack.push({selectedIndex: 0});
+            }
             selected = 2;
             selectedButton = i;
             selectedKnob = -1;
@@ -615,7 +621,7 @@ function handleCC(cc, val) {
             let lastEnteredText = "(empty)";
             if (selected === 0) lastEnteredText = banks[selectedBank].pads[selectedPad].name;
             if (selected === 1) lastEnteredText = banks[selectedBank].knobs[selectedKnob].name;
-            if (selected === 2) lastEnteredText = banks[selectedBank].buttons[selectedButton.name];
+            if (selected === 2) lastEnteredText = banks[selectedBank].buttons[selectedButton].name;
             if (selected === 3) lastEnteredText = banks[selectedBank].name;
             lastEnteredText = lastEnteredText || "(empty)";
             openTextEntry({
@@ -625,7 +631,7 @@ function handleCC(cc, val) {
                     lastEnteredText = text || "(empty)";
                     if (selected === 0) banks[selectedBank].pads[selectedPad].name = text;
                     if (selected === 1) banks[selectedBank].knobs[selectedKnob].name = text;
-                    if (selected === 2) banks[selectedBank].buttons[selectedButton] = text;
+                    if (selected === 2) banks[selectedBank].buttons[selectedButton].name = text;
                     if (selected === 3) banks[selectedBank].name = text;
                 }
             });
@@ -684,43 +690,47 @@ function handleNote(note, vel) {
     /* Knob touch */
     if (note >= 0 && note <= 8 && vel > 0) {
         if (viewMode === VIEW_MAIN) showKnobOverlay(note);
-        selectedKnob = note;
-        selectedPad = -1;
-        selectedButton = -1;
-        selected = 1;
-        if (viewMode === VIEW_SETTINGS) {
+        if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
             settingsMenuStack.push({selectedIndex: 0});
         }
+        selectedKnob = note;
+        selectedPad = -1;
+        selectedButton = -1;
+        selected = 1;
         needsRedraw = true;
         return;
     }
     /* Step buttons change bank */
     if (note >= 16 && note <= 31 && vel > 0) {
         const bankIdx = note - 16;
+        if (viewMode === VIEW_MAIN) showStepOverlay(bankIdx);
+        if (viewMode === VIEW_SETTINGS  && selectedBank != bankIdx) {
+            settingsMenuState.editing = false;
+            disableLEDUpdate = false;
+            settingsMenuStack.push({selectedIndex: 0});
+        }
         selectedBank = bankIdx;
         selectedKnob = -1;
         selectedPad = -1;
         selectedButton = -1;
         selected = 3;
-        if (viewMode === VIEW_MAIN) showStepOverlay(bankIdx);
-        if (viewMode === VIEW_SETTINGS) {
-            settingsMenuState.editing = false;
-            disableLEDUpdate = false;
-            settingsMenuStack.push({selectedIndex: 0});
-        }
         needsRedraw = true;
         return;
     }
     /* Pads press */
     if (note >= 68 && note <= 99 && vel > 0) {
         const padIdx = note - 68;
+        if (viewMode === VIEW_SETTINGS && selectedPad != padIdx) {
+            settingsMenuState.editing = false;
+            disableLEDUpdate = false;
+            settingsMenuStack.push({selectedIndex: 0});
+        }
         selectedKnob = -1;
         selectedButton = -1;
         selectedPad = padIdx;
         selected = 0;
-        highlightPad = true;
 
         /* edit velocity */
         let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
@@ -729,11 +739,7 @@ function handleNote(note, vel) {
         if (velOut > 127) velOut = 127;
 
         if (viewMode === VIEW_MAIN) showPadOverlay(padIdx, velOut);
-        if (viewMode === VIEW_SETTINGS) {
-            settingsMenuState.editing = false;
-            disableLEDUpdate = false;
-            settingsMenuStack.push({selectedIndex: 0});
-        }
+        highlightPad = true;
         needsRedraw = true;
 
         /* send midi */
