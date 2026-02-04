@@ -100,45 +100,46 @@ const colourSweeps = [neutralColorSweep, rainbowColorSweep, synthwaveColorSweep,
  * ============================================================================ */
 
 function defaultConfig() {
-    /* Pad, Knob and Bank state */
-    let pads = [];
-    for (let p = 0; p < NUM_PADS; p++) {
-        pads.push({
-            note: p + 36,
-            level: 100,
-            colour: Black,
-            name: "(empty)"
-        });
-    }
-
-    let knobs = [];
-    for (let k = 0; k < NUM_KNOBS; k++) {
-        knobs.push({
-            value: 0,
-            cc: k + 71,
-            min: 0,
-            max: 127,
-            colour: Black,
-            name: "(empty)"
-        });
-    }
-
-    let buttons = [];
-    for (let b = 0; b < ALL_BUTTONS.length; b++) {
-        buttons.push({
-            orig_cc: ALL_BUTTONS[b],
-            cc: ALL_BUTTONS[b],
-            colour: Black,
-            name: BUTTON_NAMES[b]
-        });
-    }
-
+    /* Pad, Knob, Button, and Bank initial state */
     let banks = [];
     for (let s = 0; s < NUM_BANKS; s++) {
+        let pads = [];
+        for (let p = 0; p < NUM_PADS; p++) {
+            pads.push({
+                note: p + 36,
+                level: 100,
+                colour: Black,
+                name: "(empty)"
+            });
+        }
+
+        let knobs = [];
+        for (let k = 0; k < NUM_KNOBS; k++) {
+            knobs.push({
+                value: 0,
+                cc: k + 71,
+                min: 0,
+                max: 127,
+                colour: Black,
+                name: "(empty)"
+            });
+        }
+
+        let buttons = [];
+        for (let b = 0; b < ALL_BUTTONS.length; b++) {
+            buttons.push({
+                orig_cc: ALL_BUTTONS[b],
+                cc: ALL_BUTTONS[b],
+                colour: Black,
+                name: BUTTON_NAMES[b]
+            });
+        }
+
         banks.push({
             midi_ch: 1,
             name: "(empty)",
             noteoffs: 1,
+            overlay: 1,
             level: 100,
             pads: pads,
             knobs: knobs,
@@ -205,9 +206,9 @@ function showPadOverlay(padNum, vel) {
 
 /* Query step mapping info and show overlay */
 function showStepOverlay(stepNum) {
-    let name = banks[selectedBank].name;
-    if (name === "(empty)") name = "";
-    showOverlay(`Bank changed ${name}`, stepNum);
+    let name = banks[stepNum].name;
+    if (name === "(empty)") name = stepNum + 1;
+    showOverlay("Bank changed", name);
     return true;
 }
 
@@ -470,7 +471,7 @@ function drawSettingsView() {
     } else if (selected === 1) {
         current = `Knob ${selectedKnob + 1}`;
     } else if (selected === 2) {
-        current = `Button ${selectedButton}`;
+        current = `Button ${selectedButton + 1}`;
     } else {
         current = `Bank ${selectedBank + 1}`;
     }
@@ -508,7 +509,7 @@ function draw() {
  * ============================================================================ */
 
 function handleCC(cc, val) {
-    let channel = banks[selectedBank].channel;
+    let channel = banks[selectedBank].channel - 1;
 
     // /* Shift state */
     // if (cc === CC_SHIFT) {
@@ -564,7 +565,7 @@ function handleCC(cc, val) {
         return;
     }
 
-    /* Other buttons send midi */
+    /* Buttons send midi */
     for (let i = 0; i < ALL_BUTTONS.length; i++) {
         if (cc === ALL_BUTTONS[i]) {
             if (viewMode === VIEW_SETTINGS && selectedButton != i) {
@@ -585,6 +586,39 @@ function handleCC(cc, val) {
                 if (showButtonOverlay(selectedButton)) {
                     needsRedraw = true;
                 }
+            }
+            return;
+            }
+    }
+
+    /* Knobs send midi */
+    for (let i = 0; i < ALL_KNOBS.length; i++) {
+        if (cc === ALL_KNOBS[i]) {
+            selected = 1;
+            selectedKnob = i;
+            selectedPad = -1;
+            selectedButton = -1;
+
+            let ccOut = banks[selectedBank].knobs[i].cc;
+            let minOut = banks[selectedBank].knobs[i].min;
+            let maxOut = banks[selectedBank].knobs[i].max;
+            let valOut = val;
+            if (!banks[selectedBank].knobs[selectedKnob].relative) {
+                valOut = banks[selectedBank].knobs[i].value;
+                if (val === 127) {
+                    valOut -=1;
+                } else if (val === 1) {
+                    valOut +=1;
+                }
+                if (valOut < minOut) valOut = minOut;
+                if (valOut > maxOut) valOut = maxOut;
+                banks[selectedBank].knobs[i].value = valOut;
+            }
+            move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
+
+            /* Query the knob mapping info and show overlay */
+            if (showKnobOverlay(selectedKnob, val)) {
+                needsRedraw = true;
             }
             return;
             }
@@ -646,46 +680,10 @@ function handleCC(cc, val) {
         }
         return;
     }
-
-    /* Knob and button handling depends on view mode */
-    if (viewMode === VIEW_MAIN) {
-        /* In main view: knobs send midi */
-        for (let i = 0; i < ALL_KNOBS.length; i++) {
-            if (cc === ALL_KNOBS[i]) {
-                selected = 1;
-                selectedKnob = i;
-                selectedPad = -1;
-                selectedButton = -1;
-
-                let ccOut = banks[selectedBank].knobs[i].cc;
-                let minOut = banks[selectedBank].knobs[i].min;
-                let maxOut = banks[selectedBank].knobs[i].max;
-                let valOut = val;
-                if (!banks[selectedBank].knobs[selectedKnob].relative) {
-                    valOut = banks[selectedBank].knobs[i].value;
-                    if (val === 127) {
-                        valOut -=1;
-                    } else if (val === 1) {
-                        valOut +=1;
-                    }
-                    if (valOut < minOut) valOut = minOut;
-                    if (valOut > maxOut) valOut = maxOut;
-                    banks[selectedBank].knobs[i].value = valOut;
-                }
-                move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
-
-                /* Query the knob mapping info and show overlay */
-                if (showKnobOverlay(selectedKnob, val)) {
-                    needsRedraw = true;
-                }
-                return;
-             }
-        }
-    }
 }
 
 function handleNote(note, vel) {
-    let channel = banks[selectedBank].channel;
+    let channel = banks[selectedBank].channel -1;
 
     /* Knob touch */
     if (note >= 0 && note <= 8 && vel > 0) {
@@ -706,7 +704,7 @@ function handleNote(note, vel) {
     if (note >= 16 && note <= 31 && vel > 0) {
         const bankIdx = note - 16;
         if (viewMode === VIEW_MAIN) showStepOverlay(bankIdx);
-        if (viewMode === VIEW_SETTINGS  && selectedBank != bankIdx) {
+        if (viewMode === VIEW_SETTINGS && selectedBank != bankIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
             settingsMenuStack.push({selectedIndex: 0});
@@ -735,7 +733,7 @@ function handleNote(note, vel) {
         /* edit velocity */
         let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
         let masterLevel = banks[selectedBank].level || 100;
-        let velOut = Math.round(vel * (padLevel/100) * (masterLevel/100))
+        let velOut = Math.round(vel * (padLevel/100) * (masterLevel/100));
         if (velOut > 127) velOut = 127;
 
         if (viewMode === VIEW_MAIN) showPadOverlay(padIdx, velOut);
@@ -755,7 +753,7 @@ function handleNote(note, vel) {
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].noteoffs) {
-            move_midi_external_send([2 << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
+            move_midi_external_send([2 << 4 | (0x80 / 16), 0x80 | channel, note, vel]);
         }
         return;
     }
