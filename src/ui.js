@@ -458,6 +458,13 @@ function initSettingsMenu() {
     });
 }
 
+function getSelectedLabel() {
+    if (selected === 0) return `Pad ${selectedPad + 1}`;
+    if (selected === 1) return `Knob ${selectedKnob + 1}`;
+    if (selected === 2) return `Button ${selectedButton + 1}`;
+    return `Bank ${selectedBank + 1}`;
+}
+
 function drawSettingsView() {
     clear_screen();
 
@@ -465,22 +472,12 @@ function drawSettingsView() {
         initSettingsMenu();
     }
 
-    let current = "(none)";
-    if (selected === 0) {
-        current = `Pad ${selectedPad + 1}`;
-    } else if (selected === 1) {
-        current = `Knob ${selectedKnob + 1}`;
-    } else if (selected === 2) {
-        current = `Button ${selectedButton + 1}`;
-    } else {
-        current = `Bank ${selectedBank + 1}`;
+    /* Update current entry in place — never push during draw */
+    const top = settingsMenuStack.current();
+    if (top) {
+        top.title = `Settings - ${getSelectedLabel()}`;
+        top.items = getSettingsItems();
     }
-
-    settingsMenuStack.push({
-        title: `Settings - ${current}`,
-        items: getSettingsItems(),
-        selectedIndex: 0
-    });
 
     const footer = settingsMenuState.editing ? 'Jog:Change Clk:Save' : 'Jog:Scroll Clk:Edit';
 
@@ -571,7 +568,7 @@ function handleCC(cc, val) {
             if (viewMode === VIEW_SETTINGS && selectedButton != i) {
                 settingsMenuState.editing = false;
                 disableLEDUpdate = false;
-                settingsMenuStack.push({selectedIndex: 0});
+                settingsMenuStack.setSelectedIndex(0);
             }
             selected = 2;
             selectedButton = i;
@@ -691,7 +688,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.push({selectedIndex: 0});
+            settingsMenuStack.setSelectedIndex(0);
         }
         selectedKnob = note;
         selectedPad = -1;
@@ -707,7 +704,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedBank != bankIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.push({selectedIndex: 0});
+            settingsMenuStack.setSelectedIndex(0);
         }
         selectedBank = bankIdx;
         selectedKnob = -1;
@@ -723,7 +720,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedPad != padIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.push({selectedIndex: 0});
+            settingsMenuStack.setSelectedIndex(0);
         }
         selectedKnob = -1;
         selectedButton = -1;
