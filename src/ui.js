@@ -13,7 +13,7 @@ import { MoveBack, MoveMenu, MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoo
 import { drawMenuHeader, showOverlay, tickOverlay, drawOverlay,
          dismissOverlayOnInput } from '/data/UserData/move-anything/shared/menu_layout.mjs';
 import { createTextScroller } from '/data/UserData/move-anything/shared/text_scroll.mjs';
-import { createValue, createToggle } from '/data/UserData/move-anything/shared/menu_items.mjs';
+import { createValue, createToggle, createBack } from '/data/UserData/move-anything/shared/menu_items.mjs';
 import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/shared/menu_nav.mjs';
 import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
 import { drawStackMenu } from '/data/UserData/move-anything/shared/menu_render.mjs';
@@ -82,7 +82,6 @@ let shiftHeld = false;
 let needsRedraw = true;
 let tickCount = 0;
 let maxChars = 10;
-let showOverlays = true;
 const REDRAW_INTERVAL = 6;
 
 /* Text scroller for selected track's patch name */
@@ -316,7 +315,7 @@ function drawMainView() {
     drawMenuHeader("Custom MIDI Control");
 
     /* Draw overlay if active */
-    if (showOverlays) drawOverlay();
+    if (banks[selectedBank].overlay) drawOverlay();
 }
 
 /* Build settings menu items using shared menu item creators */
@@ -331,13 +330,9 @@ function getSettingsItems() {
                 step: 1,
                 format: (v) => `${midiNotes[v]} (${v})`
             }),
-            createValue('Pad Level', {
-                get: () => banks[selectedBank].pads[selectedPad].level || 100,
-                set: (v) => { banks[selectedBank].pads[selectedPad].level = v; },
-                min: 0,
-                max: 200,
-                step: 1,
-                format: (v) => `${v}%`
+            createValue('Name', {
+                get: () => banks[selectedBank].pads[selectedPad].name || "(empty)",
+                set: (v) => { needsRedraw = true; }
             }),
             createValue('Colour', {
                 get: () => banks[selectedBank].pads[selectedPad].colour || 0,
@@ -347,10 +342,14 @@ function getSettingsItems() {
                 step: 1,
                 format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
             }),
-            createValue('Name', {
-                get: () => banks[selectedBank].pads[selectedPad].name || "(empty)",
-                set: (v) => { needsRedraw = true; }
-            })
+            createValue('Pad Level', {
+                get: () => banks[selectedBank].pads[selectedPad].level || 100,
+                set: (v) => { banks[selectedBank].pads[selectedPad].level = v; },
+                min: 0,
+                max: 200,
+                step: 1,
+                format: (v) => `${v}%`
+            }),
         ];
     } else if (selected === 1){
         return [
@@ -360,6 +359,18 @@ function getSettingsItems() {
                 min: 0,
                 max: 127,
                 step: 1
+            }),
+            createValue('Name', {
+                get: () => banks[selectedBank].knobs[selectedKnob].name || "(empty)",
+                set: (v) => { needsRedraw = true; }
+            }),
+            createValue('Colour', {
+                get: () => banks[selectedBank].knobs[selectedKnob].colour || 0,
+                set: (v) => { banks[selectedBank].knobs[selectedKnob].colour = v; },
+                min: 0,
+                max: colourSweeps.length - 1,
+                step: 1,
+                format: (v) => `Col${v}`
             }),
             createValue('Min Value', {
                 get: () => banks[selectedBank].knobs[selectedKnob].min || 0,
@@ -375,21 +386,12 @@ function getSettingsItems() {
                 max: 127,
                 step: 1
             }),
-            createValue('Colour', {
-                get: () => banks[selectedBank].knobs[selectedKnob].colour || 0,
-                set: (v) => { banks[selectedBank].knobs[selectedKnob].colour = v; },
-                min: 0,
-                max: colourSweeps.length - 1,
-                step: 1,
-                format: (v) => `Col${v}`
-            }),
-            createValue('Name', {
-                get: () => banks[selectedBank].knobs[selectedKnob].name || "(empty)",
-                set: (v) => { needsRedraw = true; }
-            }),
             createToggle('CC Relative', {
                 get: () => banks[selectedBank].knobs[selectedKnob].relative ?? 0,
-                set: (v) => { banks[selectedBank].knobs[selectedKnob].relative = v ? 1 : 0; }
+                set: (v) => { 
+                    banks[selectedBank].knobs[selectedKnob].relative = v ? 1 : 0; 
+                    banks[selectedBank].knobs[selectedKnob].value = v ? -1 : 0;
+                }
             })
         ];
     } else if (selected === 2){
@@ -401,6 +403,10 @@ function getSettingsItems() {
                 max: 127,
                 step: 1
             }),
+            createValue('Name', {
+                get: () => banks[selectedBank].buttons[selectedButton].name || "(empty)",
+                set: (v) => { needsRedraw = true; }
+            }),
             createValue('Colour', {
                 get: () => banks[selectedBank].buttons[selectedButton].colour || 0,
                 set: (v) => { banks[selectedBank].buttons[selectedButton].colour = v; },
@@ -408,24 +414,20 @@ function getSettingsItems() {
                 max: 127,
                 step: 10,
                 // format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
-            }),
-            createValue('Name', {
-                get: () => banks[selectedBank].buttons[selectedButton].name || "(empty)",
-                set: (v) => { needsRedraw = true; }
             })
         ];
     } else {
         return [
-            createValue('Name', {
-                get: () => banks[selectedBank].name || "(empty)",
-                set: (v) => { needsRedraw = true; }
-            }),
             createValue('MIDI Chan', {
                 get: () => banks[selectedBank].channel || 1,
                 set: (v) => { banks[selectedBank].channel = v; },
                 min: 1,
                 max: 16,
                 step: 1
+            }),
+            createValue('Name', {
+                get: () => banks[selectedBank].name || "(empty)",
+                set: (v) => { needsRedraw = true; }
             }),
             createValue('Master Pad Level', {
                 get: () => banks[selectedBank].level || 100,
@@ -441,8 +443,9 @@ function getSettingsItems() {
             }),
             createToggle('Show Overlay', {
                 get: () => banks[selectedBank].overlay ?? 1,
-                set: (v) => { banks[selectedBank].overlay = v ? 1 : 0; showOverlays = v; }
-            })
+                set: (v) => { banks[selectedBank].overlay = v ? 1 : 0; }
+            }),
+            createBack()
         ];
     }
 }
@@ -487,7 +490,7 @@ function drawSettingsView() {
         footer
     });
 
-    if (showOverlays) drawOverlay();
+    if (banks[selectedBank].overlay) drawOverlay();
 }
 
 function draw() {
@@ -536,6 +539,7 @@ function handleCC(cc, val) {
                 selectedKnob = -1;
                 selectedPad = -1;
                 selectedButton = -1;
+                settingsMenuStack.setSelectedIndex(0);
             }
         } else if (viewMode !== VIEW_MAIN) {
             viewMode = VIEW_MAIN;
@@ -568,7 +572,6 @@ function handleCC(cc, val) {
             if (viewMode === VIEW_SETTINGS && selectedButton != i) {
                 settingsMenuState.editing = false;
                 disableLEDUpdate = false;
-                settingsMenuStack.setSelectedIndex(0);
             }
             selected = 2;
             selectedButton = i;
@@ -585,7 +588,7 @@ function handleCC(cc, val) {
                 }
             }
             return;
-            }
+        }
     }
 
     /* Knobs send midi */
@@ -614,11 +617,13 @@ function handleCC(cc, val) {
             move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
 
             /* Query the knob mapping info and show overlay */
-            if (showKnobOverlay(selectedKnob, val)) {
-                needsRedraw = true;
+            if (viewMode === VIEW_MAIN) {
+                if (showKnobOverlay(selectedKnob, val)) {
+                    needsRedraw = true;
+                }
             }
             return;
-            }
+        }
     }
 
     /* Settings view - delegate to shared menu components */
@@ -688,7 +693,6 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.setSelectedIndex(0);
         }
         selectedKnob = note;
         selectedPad = -1;
@@ -704,7 +708,6 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedBank != bankIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.setSelectedIndex(0);
         }
         selectedBank = bankIdx;
         selectedKnob = -1;
@@ -720,7 +723,6 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedPad != padIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
-            settingsMenuStack.setSelectedIndex(0);
         }
         selectedKnob = -1;
         selectedButton = -1;
