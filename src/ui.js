@@ -272,16 +272,16 @@ function transferPulse(newType, newIndex) {
 }
 
 function updateLEDs() {
-    /* Pad LEDs  */
-    let pads = banks[selectedBank].pads;
-    for (let i = 0; i < NUM_PADS; i++) {
-        let colour = Black;
-        if (pads[i].colour) {
-            colour = pads[i].colour;
-        }
-        if (i === selectedPad && highlightPad === true) {
-            colour = White;
-        }
+        /* Pad LEDs  */
+        let pads = banks[selectedBank].pads;
+        for (let i = 0; i < NUM_PADS; i++) {
+            let colour = Black;
+            if (pads[i].colour) {
+                colour = pads[i].colour;
+            }
+            if (i === selectedPad && highlightPad === true) {
+                colour = White;
+            }
         setLED(i + 68, colour, true);
         if (i === selectedPad && viewMode === VIEW_SETTINGS) {
             move_midi_internal_send([0 << 4 | (0x90 / 16), 0x90, i+68, colour]);
@@ -289,13 +289,13 @@ function updateLEDs() {
         }
     }
 
-    /* Knob LEDs  */
-    let knobs = banks[selectedBank].knobs;
-    for (let i = 0; i < NUM_KNOBS; i++) {
-        let colour = Black;
-        if (knobs[i].colour) {
-            colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
-        }
+        /* Knob LEDs  */
+        let knobs = banks[selectedBank].knobs;
+        for (let i = 0; i < NUM_KNOBS; i++) {
+            let colour = Black;
+            if (knobs[i].colour) {
+                colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
+            }
         setButtonLED(i + 71, colour, true);
         if (i === selectedKnob && viewMode === VIEW_SETTINGS) {
             move_midi_internal_send([0 << 4 | (0xB0 / 16), 0xB0, i+71, colour]);
@@ -303,35 +303,35 @@ function updateLEDs() {
         }
     }
 
-    /* Button LEDs  */
-    let buttons = banks[selectedBank].buttons;
-    for (let i = 0; i < ALL_BUTTONS.length; i++) {
-        let buttonCC = ALL_BUTTONS[i];
-        let colour = getSafe(buttons[i].colour, Black);
-        setButtonLED(buttonCC, colour, true);
+        /* Button LEDs  */
+        let buttons = banks[selectedBank].buttons;
+        for (let i = 0; i < ALL_BUTTONS.length; i++) {
+            let buttonCC = ALL_BUTTONS[i];
+            let colour = getSafe(buttons[i].colour, Black);
+        setButtonLED(buttonCC, colour);
         if (i === selectedButton && viewMode === VIEW_SETTINGS) {
             move_midi_internal_send([0 << 4 | (0xB0 / 16), 0xB0, buttonCC, Black]);
             move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), buttonCC, White]);
         }
     }
 
-    /* Bank LEDs  */
-    for (let i = 0; i < NUM_BANKS; i++) {
-        let colour = DarkGrey;
-        if (i === selectedBank) {
-            colour = White;
-        }
-        setLED(i + 16, colour, true);
+        /* Bank LEDs  */
+        for (let i = 0; i < NUM_BANKS; i++) {
+            let colour = DarkGrey;
+            if (i === selectedBank) {
+                colour = White;
+            }
+        setLED(i + 16, colour);
         if (i === selectedBank && selected === 3 && viewMode === VIEW_SETTINGS) {
             move_midi_internal_send([0 << 4 | (0x90 / 16), 0x90, i+16, Black]);
             move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), i+16, White]);
         }
-    }
+        }
 
-    /* Navigation buttons */
-    setButtonLED(CC_MENU, WhiteLedBright);
-    setButtonLED(CC_BACK, WhiteLedBright);
-}
+        /* Navigation buttons */
+        setButtonLED(CC_MENU, WhiteLedBright);
+        setButtonLED(CC_BACK, WhiteLedBright);
+    }
 
 /* ============================================================================
  * Drawing
@@ -628,6 +628,11 @@ function handleCC(cc, val) {
     /* Knobs send midi */
     for (let i = 0; i < ALL_KNOBS.length; i++) {
         if (cc === ALL_KNOBS[i]) {
+            if (viewMode === VIEW_SETTINGS && selectedKnob != i) {
+                settingsMenuState.editing = false;
+                disableLEDUpdate = false;
+                transferPulse(1, i);
+            }
             selected = 1;
             selectedKnob = i;
             selectedPad = -1;
