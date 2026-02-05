@@ -752,7 +752,7 @@ function handleNote(note, vel) {
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].noteoffs) {
-            move_midi_external_send([2 << 4 | (0x80 / 16), 0x80 | channel, note, vel]);
+            move_midi_external_send([2 << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
         }
         return;
     }
