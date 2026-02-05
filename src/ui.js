@@ -223,20 +223,6 @@ function getColourForKnobValue(colour = 0, value = 0) {
     return colourSweep[index];
 }
 
-function getSafe(prop, defaultVal) {
-  return function(fn, defaultVal) {
-    try {
-      if (fn() === undefined) {
-        return defaultVal;
-      } else {
-        return fn();
-      }
-    } catch (e) {
-      return defaultVal;
-    }
-  }(function() {return prop;}, defaultVal);
-}
-
 /* ============================================================================
  * LED Control
  * ============================================================================ */
@@ -283,7 +269,7 @@ function updateLEDs() {
     let knobs = banks[selectedBank].knobs;
     for (let i = 0; i < NUM_KNOBS; i++) {
         let colour = Black;
-        if (knobs[i].colour) colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
+        if (knobs[i].value) colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
         setButtonLED(i + 71, colour);
     }
 
@@ -814,7 +800,12 @@ function onMidiMessage(msg, source) {
     }
 }
 
-/* ============================================================================
+function midiIgnore(msg, source) {
+    /* ignore external MIDI messages */
+    return;
+}
+
+    /* ============================================================================
  * Lifecycle
  * ============================================================================ */
 
@@ -867,4 +858,4 @@ function tick() {
 globalThis.init = init;
 globalThis.tick = tick;
 globalThis.onMidiMessageInternal = onMidiMessage;
-globalThis.onMidiMessageExternal = onMidiMessage;
+globalThis.onMidiMessageExternal = midiIgnore;
