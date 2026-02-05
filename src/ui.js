@@ -242,6 +242,35 @@ function getSafe(prop, defaultVal) {
  * LED Control
  * ============================================================================ */
 
+/* Stop the pulsing LED on the current selection */
+function stopPulse() {
+    if (selected === 0 && selectedPad >= 0) {
+        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), selectedPad+68, 0]);
+    } else if (selected === 1 && selectedKnob >= 0) {
+        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), selectedKnob+71, 0]);
+    } else if (selected === 2 && selectedButton >= 0) {
+        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), ALL_BUTTONS[selectedButton], 0]);
+    } else if (selected === 3) {
+        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), selectedBank+16, 0]);
+    }
+}
+
+/* Transfer pulse from current selection to new one (2 MIDI messages vs 70+) */
+function transferPulse(newType, newIndex) {
+    stopPulse();
+
+    /* Start new pulse */
+    if (newType === 0 && newIndex >= 0) {
+        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), newIndex+68, White]);
+    } else if (newType === 1 && newIndex >= 0) {
+        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), newIndex+71, White]);
+    } else if (newType === 2 && newIndex >= 0) {
+        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), ALL_BUTTONS[newIndex], White]);
+    } else if (newType === 3 && newIndex >= 0) {
+        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), newIndex+16, White]);
+    }
+}
+
 function updateLEDs() {
     /* Pad LEDs  */
     let pads = banks[selectedBank].pads;
@@ -531,10 +560,12 @@ function handleCC(cc, val) {
             }
             /* Exit settings */
             if (selected === 3) {
+                stopPulse();
                 viewMode = VIEW_MAIN;
                 saveConfig();
                 settingsMenuStack = null;  /* Reset for next time */
             } else {
+                stopPulse();
                 selected = 3;
                 selectedKnob = -1;
                 selectedPad = -1;
@@ -542,6 +573,7 @@ function handleCC(cc, val) {
                 settingsMenuStack.setSelectedIndex(0);
             }
         } else if (viewMode !== VIEW_MAIN) {
+            stopPulse();
             viewMode = VIEW_MAIN;
             saveConfig();
             settingsMenuStack = null;  /* Reset for next time */
@@ -556,6 +588,7 @@ function handleCC(cc, val) {
     if (cc === CC_MENU && val > 63) {
         /* Toggle between main and settings */
         if (viewMode === VIEW_SETTINGS) {
+            stopPulse();
             viewMode = VIEW_MAIN;
             saveConfig();
             settingsMenuStack = null;  /* Reset for next time */
@@ -572,6 +605,7 @@ function handleCC(cc, val) {
             if (viewMode === VIEW_SETTINGS && selectedButton != i) {
                 settingsMenuState.editing = false;
                 disableLEDUpdate = false;
+                transferPulse(2, i);
             }
             selected = 2;
             selectedButton = i;
@@ -693,6 +727,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
+            transferPulse(1, note);
         }
         selectedKnob = note;
         selectedPad = -1;
@@ -708,6 +743,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedBank != bankIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
+            transferPulse(3, bankIdx);
         }
         selectedBank = bankIdx;
         selectedKnob = -1;
@@ -723,6 +759,7 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_SETTINGS && selectedPad != padIdx) {
             settingsMenuState.editing = false;
             disableLEDUpdate = false;
+            transferPulse(0, padIdx);
         }
         selectedKnob = -1;
         selectedButton = -1;
