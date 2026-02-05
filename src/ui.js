@@ -75,7 +75,6 @@ let selectedKnob = -1;
 let selectedButton = -1;
 let selectedBank = 0;
 let highlightPad = false;
-let disableLEDUpdate = false;
 
 /* UI state */
 let shiftHeld = false;
@@ -245,13 +244,13 @@ function getSafe(prop, defaultVal) {
 /* Stop the pulsing LED on the current selection */
 function stopPulse() {
     if (selected === 0 && selectedPad >= 0) {
-        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), selectedPad+68, 0]);
+        move_midi_internal_send([0 << 4 | ((0x90) / 16), (0x90), selectedPad+68, banks[selectedBank].pads[selectedPad].colour]);
     } else if (selected === 1 && selectedKnob >= 0) {
-        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), selectedKnob+71, 0]);
+        move_midi_internal_send([0 << 4 | ((0xB0) / 16), (0xB0), selectedKnob+71, getColourForKnobValue(banks[selectedBank].knobs[selectedKnob].colour, banks[selectedBank].knobs[selectedKnob].value)]);
     } else if (selected === 2 && selectedButton >= 0) {
-        move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), ALL_BUTTONS[selectedButton], 0]);
+        move_midi_internal_send([0 << 4 | ((0xB0) / 16), (0xB0), ALL_BUTTONS[selectedButton], banks[selectedBank].buttons[selectedButton].colour]);
     } else if (selected === 3) {
-        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), selectedBank+16, 0]);
+        move_midi_internal_send([0 << 4 | ((0x90) / 16), (0x90), selectedBank+16, White]);
     }
 }
 
@@ -267,71 +266,47 @@ function transferPulse(newType, newIndex) {
     } else if (newType === 2 && newIndex >= 0) {
         move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), ALL_BUTTONS[newIndex], White]);
     } else if (newType === 3 && newIndex >= 0) {
-        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), newIndex+16, White]);
+        move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), newIndex+16, Black]);
     }
 }
 
 function updateLEDs() {
-        /* Pad LEDs  */
-        let pads = banks[selectedBank].pads;
-        for (let i = 0; i < NUM_PADS; i++) {
-            let colour = Black;
-            if (pads[i].colour) {
-                colour = pads[i].colour;
-            }
-            if (i === selectedPad && highlightPad === true) {
-                colour = White;
-            }
-        setLED(i + 68, colour, true);
-        if (i === selectedPad && viewMode === VIEW_SETTINGS) {
-            move_midi_internal_send([0 << 4 | (0x90 / 16), 0x90, i+68, colour]);
-            move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), i+68, White]);
-        }
+    /* Pad LEDs  */
+    let pads = banks[selectedBank].pads;
+    for (let i = 0; i < NUM_PADS; i++) {
+        let colour = Black;
+        if (pads[i].colour) colour = pads[i].colour;
+        setLED(i + 68, colour);
     }
 
-        /* Knob LEDs  */
-        let knobs = banks[selectedBank].knobs;
-        for (let i = 0; i < NUM_KNOBS; i++) {
-            let colour = Black;
-            if (knobs[i].colour) {
-                colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
-            }
-        setButtonLED(i + 71, colour, true);
-        if (i === selectedKnob && viewMode === VIEW_SETTINGS) {
-            move_midi_internal_send([0 << 4 | (0xB0 / 16), 0xB0, i+71, colour]);
-            move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), i+71, White]);
-        }
+    /* Knob LEDs  */
+    let knobs = banks[selectedBank].knobs;
+    for (let i = 0; i < NUM_KNOBS; i++) {
+        let colour = Black;
+        if (knobs[i].colour) colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
+        setButtonLED(i + 71, colour);
     }
 
-        /* Button LEDs  */
-        let buttons = banks[selectedBank].buttons;
-        for (let i = 0; i < ALL_BUTTONS.length; i++) {
-            let buttonCC = ALL_BUTTONS[i];
-            let colour = getSafe(buttons[i].colour, Black);
+    /* Button LEDs  */
+    let buttons = banks[selectedBank].buttons;
+    for (let i = 0; i < ALL_BUTTONS.length; i++) {
+        let buttonCC = ALL_BUTTONS[i];
+        let colour = Black;
+        if (buttons[i].colour) colour = buttons[i].colour;
         setButtonLED(buttonCC, colour);
-        if (i === selectedButton && viewMode === VIEW_SETTINGS) {
-            move_midi_internal_send([0 << 4 | (0xB0 / 16), 0xB0, buttonCC, Black]);
-            move_midi_internal_send([0 << 4 | ((0xB0+0x09) / 16), (0xB0+0x09), buttonCC, White]);
-        }
     }
 
-        /* Bank LEDs  */
-        for (let i = 0; i < NUM_BANKS; i++) {
-            let colour = DarkGrey;
-            if (i === selectedBank) {
-                colour = White;
-            }
+    /* Bank LEDs  */
+    for (let i = 0; i < NUM_BANKS; i++) {
+        let colour = DarkGrey;
+        if (i === selectedBank) colour = White;
         setLED(i + 16, colour);
-        if (i === selectedBank && selected === 3 && viewMode === VIEW_SETTINGS) {
-            move_midi_internal_send([0 << 4 | (0x90 / 16), 0x90, i+16, Black]);
-            move_midi_internal_send([0 << 4 | ((0x90+0x09) / 16), (0x90+0x09), i+16, White]);
-        }
-        }
-
-        /* Navigation buttons */
-        setButtonLED(CC_MENU, WhiteLedBright);
-        setButtonLED(CC_BACK, WhiteLedBright);
     }
+
+    /* Navigation buttons */
+    setButtonLED(CC_MENU, WhiteLedBright);
+    setButtonLED(CC_BACK, WhiteLedBright);
+}
 
 /* ============================================================================
  * Drawing
@@ -594,6 +569,11 @@ function handleCC(cc, val) {
             settingsMenuStack = null;  /* Reset for next time */
         } else {
             viewMode = VIEW_SETTINGS;
+            selected = 3;
+            selectedButton = -1;
+            selectedKnob = -1;
+            selectedPad = -1;
+            transferPulse(3, selectedBank);
         }
         needsRedraw = true;
         return;
@@ -604,7 +584,6 @@ function handleCC(cc, val) {
         if (cc === ALL_BUTTONS[i]) {
             if (viewMode === VIEW_SETTINGS && selectedButton != i) {
                 settingsMenuState.editing = false;
-                disableLEDUpdate = false;
                 transferPulse(2, i);
             }
             selected = 2;
@@ -630,7 +609,6 @@ function handleCC(cc, val) {
         if (cc === ALL_KNOBS[i]) {
             if (viewMode === VIEW_SETTINGS && selectedKnob != i) {
                 settingsMenuState.editing = false;
-                disableLEDUpdate = false;
                 transferPulse(1, i);
             }
             selected = 1;
@@ -655,9 +633,12 @@ function handleCC(cc, val) {
             }
             move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
 
-            /* Query the knob mapping info and show overlay */
             if (viewMode === VIEW_MAIN) {
-                if (showKnobOverlay(selectedKnob, val)) {
+                let knobs = banks[selectedBank].knobs;
+                let colour = getColourForKnobValue(knobs[i].colour, valOut);
+                setButtonLED(i + 71, colour);
+
+                if (showKnobOverlay(selectedKnob, valOut)) {
                     needsRedraw = true;
                 }
             }
@@ -684,12 +665,16 @@ function handleCC(cc, val) {
 
         /* Check if user selected items */
         const item = items[settingsMenuState.selectedIndex];
-        disableLEDUpdate = false;
         if (item && item.label === 'Colour' && settingsMenuState.editing) {
-            disableLEDUpdate = true;
-            if (selected === 0) setLED(MovePads[selectedPad], settingsMenuState.editValue, true);
-            if (selected === 1) setButtonLED(ALL_KNOBS[selectedKnob], settingsMenuState.editValue, true);
-            if (selected === 2) setButtonLED(ALL_BUTTONS[selectedButton], settingsMenuState.editValue, true);
+            if (selected === 0) setLED(MovePads[selectedPad], settingsMenuState.editValue);
+            if (selected === 1) setButtonLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(settingsMenuState.editValue, banks[selectedBank].knobs[selectedKnob].value));
+            if (selected === 2) setButtonLED(ALL_BUTTONS[selectedButton], settingsMenuState.editValue);
+            return;
+        }
+        if (item && item.label === 'Colour' && !settingsMenuState.editing) {
+            if (selected === 0) setLED(MovePads[selectedPad], banks[selectedBank].pads[selectedPad].colour);
+            if (selected === 1) setButtonLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(banks[selectedBank].knobs[selectedKnob].colour, banks[selectedBank].knobs[selectedKnob].value));
+            if (selected === 2) setButtonLED(ALL_BUTTONS[selectedButton], banks[selectedBank].buttons[selectedButton].colour);
             return;
         }
         if (item && item.label === 'Name' && cc === CC_JOG_CLICK && val > 63) {
@@ -731,7 +716,6 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_MAIN) showKnobOverlay(note);
         if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
-            disableLEDUpdate = false;
             transferPulse(1, note);
         }
         selectedKnob = note;
@@ -745,9 +729,8 @@ function handleNote(note, vel) {
     if (note >= 16 && note <= 31 && vel > 0) {
         const bankIdx = note - 16;
         if (viewMode === VIEW_MAIN) showStepOverlay(bankIdx);
-        if (viewMode === VIEW_SETTINGS && selectedBank != bankIdx) {
+        if (viewMode === VIEW_SETTINGS) {
             settingsMenuState.editing = false;
-            disableLEDUpdate = false;
             transferPulse(3, bankIdx);
         }
         selectedBank = bankIdx;
@@ -756,6 +739,8 @@ function handleNote(note, vel) {
         selectedButton = -1;
         selected = 3;
         needsRedraw = true;
+        updateLEDs();
+        if (viewMode === VIEW_SETTINGS) transferPulse(3, bankIdx);
         return;
     }
     /* Pads press */
@@ -763,7 +748,6 @@ function handleNote(note, vel) {
         const padIdx = note - 68;
         if (viewMode === VIEW_SETTINGS && selectedPad != padIdx) {
             settingsMenuState.editing = false;
-            disableLEDUpdate = false;
             transferPulse(0, padIdx);
         }
         selectedKnob = -1;
@@ -777,6 +761,7 @@ function handleNote(note, vel) {
         let velOut = Math.round(vel * (padLevel/100) * (masterLevel/100));
         if (velOut > 127) velOut = 127;
 
+        if (viewMode === VIEW_MAIN) setLED(note, White);
         if (viewMode === VIEW_MAIN) showPadOverlay(padIdx, velOut);
         highlightPad = true;
         needsRedraw = true;
@@ -790,6 +775,7 @@ function handleNote(note, vel) {
     if (note >= 68 && note <= 99 && vel === 0) {
         highlightPad = false;
         needsRedraw = true;
+        if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[selectedPad].colour);
 
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
@@ -868,7 +854,6 @@ function tick() {
 
     /* Periodic state sync and redraw */
     if (tickCount % REDRAW_INTERVAL === 0) {
-        if (!disableLEDUpdate) updateLEDs();
         needsRedraw = true;
     }
 
