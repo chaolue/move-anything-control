@@ -13,11 +13,11 @@ import { MoveBack, MoveMenu, MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoo
 import { drawMenuHeader, showOverlay, tickOverlay, drawOverlay,
          dismissOverlayOnInput } from '/data/UserData/move-anything/shared/menu_layout.mjs';
 import { createTextScroller } from '/data/UserData/move-anything/shared/text_scroll.mjs';
-import { createValue, createToggle, createBack } from '/data/UserData/move-anything/shared/menu_items.mjs';
+import { createValue, createToggle } from '/data/UserData/move-anything/shared/menu_items.mjs';
 import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/shared/menu_nav.mjs';
 import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
 import { drawStackMenu } from '/data/UserData/move-anything/shared/menu_render.mjs';
-import { openTextEntry, isTextEntryActive, handleTextEntryMidi, drawTextEntry, 
+import { openTextEntry, isTextEntryActive, handleTextEntryMidi, drawTextEntry,
          tickTextEntry } from '/data/UserData/move-anything/shared/text_entry.mjs';
 
 /* ============================================================================
@@ -49,9 +49,9 @@ const CC_MUTE = MoveMute;
 const CC_COPY = MoveCopy;
 
 const ALL_KNOBS = [MoveKnob1, MoveKnob2, MoveKnob3, MoveKnob4, MoveKnob5, MoveKnob6, MoveKnob7, MoveKnob8, MoveMaster];
-const ALL_BUTTONS = [MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoop, MoveMute, MoveDelete, MoveCopy, MoveUndo, MoveShift, MoveUp, MoveLeft, MoveRight, MoveDown];
-const WHITE_BUTTONS = [MoveCapture, MoveLoop, MoveMute, MoveDelete, MoveCopy, MoveUndo, MoveShift, MoveUp, MoveLeft, MoveRight, MoveDown];
-const BUTTON_NAMES = ["Play", "Rec", "Capture", "Record", "Loop", "Mute", "Delete", "Copy", "Undo", "Shift", "Up", "Left", "Right", "Down"];
+const ALL_BUTTONS = [MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoop, MoveMute, MoveDelete, MoveCopy, MoveUndo, MoveUp, MoveLeft, MoveRight, MoveDown];
+const WHITE_BUTTONS = [MoveCapture, MoveLoop, MoveMute, MoveDelete, MoveCopy, MoveUndo, MoveUp, MoveLeft, MoveRight, MoveDown];
+const BUTTON_NAMES = ["Play", "Rec", "Capture", "Record", "Loop", "Mute", "Delete", "Copy", "Undo", "Up", "Left", "Right", "Down"];
 
 /* ============================================================================
  * State
@@ -74,7 +74,7 @@ let selectedPad = -1;
 let selectedKnob = -1;
 let selectedButton = -1;
 let selectedBank = 0;
-let highlightPad = false;
+let cable = 2;
 
 /* UI state */
 let shiftHeld = false;
@@ -105,9 +105,9 @@ function defaultConfig() {
         for (let p = 0; p < NUM_PADS; p++) {
             pads.push({
                 note: p + 36,
-                level: 100,
+                name: "(empty)",
                 colour: Black,
-                name: "(empty)"
+                level: 100
             });
         }
 
@@ -116,10 +116,10 @@ function defaultConfig() {
             knobs.push({
                 value: 0,
                 cc: k + 71,
-                min: 0,
-                max: 127,
+                name: "(empty)",
                 colour: Black,
-                name: "(empty)"
+                min: 0,
+                max: 127
             });
         }
 
@@ -128,17 +128,18 @@ function defaultConfig() {
             buttons.push({
                 orig_cc: ALL_BUTTONS[b],
                 cc: ALL_BUTTONS[b],
-                colour: Black,
-                name: BUTTON_NAMES[b]
+                name: BUTTON_NAMES[b],
+                colour: Black
             });
         }
 
         banks.push({
             midi_ch: 1,
             name: "(empty)",
+            level: 100,
+            shadow: 1,
             noteoffs: 1,
             overlay: 1,
-            level: 100,
             pads: pads,
             knobs: knobs,
             buttons: buttons
@@ -305,7 +306,7 @@ function drawMainView() {
     drawMenuHeader("Custom MIDI Control");
 
     /* Draw overlay if active */
-    if (banks[selectedBank].overlay) drawOverlay();
+    drawOverlay();
 }
 
 /* Build settings menu items using shared menu item creators */
@@ -378,8 +379,8 @@ function getSettingsItems() {
             }),
             createToggle('CC Relative', {
                 get: () => banks[selectedBank].knobs[selectedKnob].relative ?? 0,
-                set: (v) => { 
-                    banks[selectedBank].knobs[selectedKnob].relative = v ? 1 : 0; 
+                set: (v) => {
+                    banks[selectedBank].knobs[selectedKnob].relative = v ? 1 : 0;
                     banks[selectedBank].knobs[selectedKnob].value = v ? -1 : 0;
                 }
             })
@@ -427,6 +428,10 @@ function getSettingsItems() {
                 step: 1,
                 format: (v) => `${v}%`
             }),
+            createToggle('Use Shadow Synths', {
+                get: () => banks[selectedBank].shadow ?? 0,
+                set: (v) => { banks[selectedBank].shadow = v ? 1 : 0; }
+            }),
             createToggle('Note Offs', {
                 get: () => banks[selectedBank].noteoffs ?? 1,
                 set: (v) => { banks[selectedBank].noteoffs = v ? 1 : 0; }
@@ -434,8 +439,7 @@ function getSettingsItems() {
             createToggle('Show Overlay', {
                 get: () => banks[selectedBank].overlay ?? 1,
                 set: (v) => { banks[selectedBank].overlay = v ? 1 : 0; }
-            }),
-            createBack()
+            })
         ];
     }
 }
@@ -479,8 +483,6 @@ function drawSettingsView() {
         state: settingsMenuState,
         footer
     });
-
-    if (banks[selectedBank].overlay) drawOverlay();
 }
 
 function draw() {
@@ -501,12 +503,12 @@ function draw() {
 function handleCC(cc, val) {
     let channel = banks[selectedBank].channel - 1;
 
-    // /* Shift state */
-    // if (cc === CC_SHIFT) {
-    //     shiftHeld = val > 63;
-    //     needsRedraw = true;
-    //     return;
-    // }
+    /* Shift state */
+    if (cc === CC_SHIFT) {
+        shiftHeld = val > 63;
+        needsRedraw = true;
+        return;
+    }
 
     /* Navigation */
     if (cc === CC_BACK && val > 63) {
@@ -578,13 +580,15 @@ function handleCC(cc, val) {
             selectedPad = -1;
 
             let ccOut = banks[selectedBank].buttons[i].cc;
-            move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, val]);
+            if (banks[selectedBank].shadow) {
+                  shadow_send_midi_to_dsp([0xB0 | channel, ccOut, val]);
+            } else {
+                move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, val]);
+            }
 
             /* Query the button mapping info and show overlay */
-            if (viewMode === VIEW_MAIN) {
-                if (showButtonOverlay(selectedButton)) {
-                    needsRedraw = true;
-                }
+            if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) {
+                if (showButtonOverlay(selectedButton)) needsRedraw = true;
             }
             return;
         }
@@ -592,6 +596,9 @@ function handleCC(cc, val) {
 
     /* Knobs send midi */
     for (let i = 0; i < ALL_KNOBS.length; i++) {
+        if (shiftHeld) {
+            return;
+        }
         if (cc === ALL_KNOBS[i]) {
             if (viewMode === VIEW_SETTINGS && selectedKnob != i) {
                 settingsMenuState.editing = false;
@@ -617,15 +624,19 @@ function handleCC(cc, val) {
                 if (valOut > maxOut) valOut = maxOut;
                 banks[selectedBank].knobs[i].value = valOut;
             }
-            move_midi_external_send([2 << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
+            if (banks[selectedBank].shadow) {
+                shadow_send_midi_to_dsp([0xB0 | channel, ccOut, valOut]);
+            } else {
+                move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
+            }
 
             if (viewMode === VIEW_MAIN) {
                 let knobs = banks[selectedBank].knobs;
                 let colour = getColourForKnobValue(knobs[i].colour, valOut);
                 setButtonLED(i + 71, colour);
 
-                if (showKnobOverlay(selectedKnob, valOut)) {
-                    needsRedraw = true;
+                if (banks[selectedBank].overlay) {
+                    if (showKnobOverlay(selectedKnob, valOut)) needsRedraw = true;
                 }
             }
             return;
@@ -697,9 +708,13 @@ function handleCC(cc, val) {
 function handleNote(note, vel) {
     let channel = banks[selectedBank].channel -1;
 
+    if (shiftHeld) {
+        return;
+    }
+
     /* Knob touch */
     if (note >= 0 && note <= 8 && vel > 0) {
-        if (viewMode === VIEW_MAIN) showKnobOverlay(note);
+        if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showKnobOverlay(note);
         if (viewMode === VIEW_SETTINGS && selectedKnob != note) {
             settingsMenuState.editing = false;
             transferPulse(1, note);
@@ -748,25 +763,31 @@ function handleNote(note, vel) {
         if (velOut > 127) velOut = 127;
 
         if (viewMode === VIEW_MAIN) setLED(note, White);
-        if (viewMode === VIEW_MAIN) showPadOverlay(padIdx, velOut);
-        highlightPad = true;
+        if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
         needsRedraw = true;
 
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
-        move_midi_external_send([2 << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
+        if (banks[selectedBank].shadow) {
+            shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
+        } else {
+            move_midi_external_send([cable << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
+        }
         return;
     }
     /* Pads release */
     if (note >= 68 && note <= 99 && vel === 0) {
-        highlightPad = false;
         needsRedraw = true;
         if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[selectedPad].colour);
 
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].noteoffs) {
-            move_midi_external_send([2 << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
+            if (banks[selectedBank].shadow) {
+                shadow_send_midi_to_dsp([0x80 | channel, noteOut, vel]);
+            } else {
+                move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
+            }
         }
         return;
     }
@@ -797,6 +818,15 @@ function onMidiMessage(msg, source) {
     } else if (status === 0x90 || status === 0x80) {
         const vel = status === 0x80 ? 0 : data2;
         handleNote(data1, vel);
+    } else if (status === 0xA0) {
+        if (data2 > 18) {  /* ignore light aftertouch */
+            let channel = banks[selectedBank].channel;
+            if (banks[selectedBank].shadow) {
+                shadow_send_midi_to_dsp([status | channel, data1, data2]);
+            } else {
+                move_midi_external_send([cable << 4 | (status / 16), status | channel, data1, data2]);
+            }
+        }
     }
 }
 
