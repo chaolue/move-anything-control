@@ -87,11 +87,12 @@ const REDRAW_INTERVAL = 6;
 const nameScroller = createTextScroller();
 
 /* Colour sweeps */
-const neutralColorSweep = [0, 124, 123, 120];
-const rainbowColorSweep = [33, 16, 15, 14, 11, 8, 3, 2];
-const synthwaveColorSweep = [104, 105, 20, 21, 23, 26, 25];
-const roseColorSweep = [124, 35, 23, 26, 25];
-const colourSweeps = [neutralColorSweep, rainbowColorSweep, synthwaveColorSweep, roseColorSweep];
+const cachedKnobColour = {};
+const neutralColourSweep = [0, 124, 123, 120];
+const rainbowColourSweep = [33, 16, 15, 14, 11, 8, 3, 2];
+const synthwaveColourSweep = [104, 105, 20, 21, 23, 26, 25];
+const roseColourSweep = [124, 35, 23, 26, 25];
+const colourSweeps = [neutralColourSweep, rainbowColourSweep, synthwaveColourSweep, roseColourSweep];
 
 /* ============================================================================
  * Helpers
@@ -581,7 +582,11 @@ function handleCC(cc, val) {
 
             let ccOut = banks[selectedBank].buttons[i].cc;
             if (banks[selectedBank].shadow) {
-                  shadow_send_midi_to_dsp([0xB0 | channel, ccOut, val]);
+                try {
+                    shadow_send_midi_to_dsp([0xB0 | channel, ccOut, val]);
+                } catch {
+                    console.log("Shadow mode MIDI playback not available.")
+                }
             } else {
                 move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, val]);
             }
@@ -625,7 +630,11 @@ function handleCC(cc, val) {
                 banks[selectedBank].knobs[i].value = valOut;
             }
             if (banks[selectedBank].shadow) {
-                shadow_send_midi_to_dsp([0xB0 | channel, ccOut, valOut]);
+                try {
+                    shadow_send_midi_to_dsp([0xB0 | channel, ccOut, valOut]);
+                } catch {
+                    console.log("Shadow mode MIDI playback not available.")
+                }
             } else {
                 move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
             }
@@ -633,7 +642,9 @@ function handleCC(cc, val) {
             if (viewMode === VIEW_MAIN) {
                 let knobs = banks[selectedBank].knobs;
                 let colour = getColourForKnobValue(knobs[i].colour, valOut);
+                if (cachedKnobColour[selectedKnob] === colour) return;
                 setButtonLED(i + 71, colour);
+                cachedKnobColour[selectedButton] = colour;
 
                 if (banks[selectedBank].overlay) {
                     if (showKnobOverlay(selectedKnob, valOut)) needsRedraw = true;
@@ -769,7 +780,11 @@ function handleNote(note, vel) {
         /* send midi */
         let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].shadow) {
-            shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
+            try {
+                shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
+            } catch {
+                console.log("Shadow mode MIDI playback not available.")
+            }
         } else {
             move_midi_external_send([cable << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
         }
@@ -784,7 +799,11 @@ function handleNote(note, vel) {
         let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].noteoffs) {
             if (banks[selectedBank].shadow) {
-                shadow_send_midi_to_dsp([0x80 | channel, noteOut, vel]);
+                try {
+                    shadow_send_midi_to_dsp([0x80 | channel, noteOut, vel]);
+                } catch {
+                    console.log("Shadow mode MIDI playback not available.")
+                }
             } else {
                 move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
             }
@@ -822,7 +841,11 @@ function onMidiMessage(msg, source) {
         if (data2 > 18) {  /* ignore light aftertouch */
             let channel = banks[selectedBank].channel;
             if (banks[selectedBank].shadow) {
-                shadow_send_midi_to_dsp([status | channel, data1, data2]);
+                try {
+                    shadow_send_midi_to_dsp([status | channel, data1, data2]);
+                } catch {
+                    console.log("Shadow mode MIDI playback not available.")
+                }
             } else {
                 move_midi_external_send([cable << 4 | (status / 16), status | channel, data1, data2]);
             }
