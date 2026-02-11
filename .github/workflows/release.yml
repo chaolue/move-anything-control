@@ -26,10 +26,7 @@ jobs:
           fi
           echo "Version check passed: $TAG_VERSION"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build with Docker
+      - name: Build
         run: |
           sh ./scripts/build.sh
 
@@ -46,12 +43,12 @@ jobs:
           # Save install_path before switching branches
           INSTALL_PATH=$(jq -r '.install_path // empty' release.json 2>/dev/null || echo "")
 
-          git fetch origin main
-          git checkout -f main
+          git fetch origin master
+          git checkout -f master
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Recreate release.json on main
+          # Recreate release.json on master
           if [ -n "$INSTALL_PATH" ]; then
             cat > release.json << EOF
           {
@@ -71,4 +68,4 @@ jobs:
 
           git add release.json
           git commit -m "chore: update release.json for ${{ github.ref_name }}" || echo "No changes to commit"
-          git push origin main
+          git push origin master
