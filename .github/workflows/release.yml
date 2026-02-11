@@ -61,7 +61,7 @@ jobs:
             cat > release.json << EOF
           {
             "version": "${VERSION}",
-            "download_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/seqomd-module.tar.gz"
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/control-module.tar.gz"
           }
           EOF
           fi
