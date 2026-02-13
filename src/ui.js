@@ -792,6 +792,12 @@ function handleNote(note, vel) {
     }
     /* Pads release */
     if (note >= 68 && note <= 99 && vel === 0) {
+        const padIdx = note - 68;
+        selectedKnob = -1;
+        selectedButton = -1;
+        selectedPad = padIdx;
+        selected = 0;
+
         needsRedraw = true;
         if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[selectedPad].colour);
 
