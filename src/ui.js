@@ -74,6 +74,7 @@ let selectedPad = -1;
 let selectedKnob = -1;
 let selectedButton = -1;
 let selectedBank = 0;
+let chokes = [];
 let cable = 2;
 
 /* UI state */
@@ -342,6 +343,14 @@ function getSettingsItems() {
                 step: 1,
                 format: (v) => `${v}%`
             }),
+            createValue('Choke Grp', {
+                get: () => banks[selectedBank].pads[selectedPad].chokegrp || 0,
+                set: (v) => { banks[selectedBank].pads[selectedPad].chokegrp = v; },
+                min: 0,
+                max: 8,
+                step: 1,
+                format: (v) => `${v}`
+            }),
         ];
     } else if (selected === 1){
         return [
@@ -585,7 +594,7 @@ function handleCC(cc, val) {
                 try {
                     shadow_send_midi_to_dsp([0xB0 | channel, ccOut, val]);
                 } catch {
-                    console.log("Shadow mode MIDI playback not available.")
+                    console.log("Shadow mode MIDI playback not available.");
                 }
             } else {
                 move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, val]);
@@ -633,7 +642,7 @@ function handleCC(cc, val) {
                 try {
                     shadow_send_midi_to_dsp([0xB0 | channel, ccOut, valOut]);
                 } catch {
-                    console.log("Shadow mode MIDI playback not available.")
+                    console.log("Shadow mode MIDI playback not available.");
                 }
             } else {
                 move_midi_external_send([cable << 4 | (0xB0 / 16), 0xB0 | channel, ccOut, valOut]);
@@ -750,6 +759,7 @@ function handleNote(note, vel) {
         selectedPad = -1;
         selectedButton = -1;
         selected = 3;
+        chokes = [];
         needsRedraw = true;
         updateLEDs();
         if (viewMode === VIEW_SETTINGS) transferPulse(3, bankIdx);
@@ -766,6 +776,7 @@ function handleNote(note, vel) {
         selectedButton = -1;
         selectedPad = padIdx;
         selected = 0;
+        let noteOut = banks[selectedBank].pads[selectedPad].note;
 
         /* edit velocity */
         let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
@@ -777,38 +788,51 @@ function handleNote(note, vel) {
         if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
         needsRedraw = true;
 
+        /* choke group handling */
+        let padChokeGrp = banks[selectedBank].pads[selectedPad].chokegrp;
+        if (padChokeGrp) {
+            if (typeof chokes[padChokeGrp] === 'undefined') chokes[padChokeGrp] = [];
+            chokes[padChokeGrp] = chokes[padChokeGrp].filter(item => !(item === noteOut)); //remove current pad if exists
+        }
         /* send midi */
-        let noteOut = banks[selectedBank].pads[selectedPad].note;
         if (banks[selectedBank].shadow) {
             try {
                 shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
+                if (chokes[padChokeGrp]) {
+                    for (var i = 0; i < chokes[padChokeGrp].length; i++) {
+                        shadow_send_midi_to_dsp([0x80 | channel, chokes[padChokeGrp][i], 0]);
+                    }
+                    chokes[padChokeGrp] = [];
+                }
             } catch {
-                console.log("Shadow mode MIDI playback not available.")
+                console.log("Shadow mode MIDI playback not available.");
             }
         } else {
             move_midi_external_send([cable << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
+            if (chokes[padChokeGrp]) {
+                for (var j = 0; j < chokes[padChokeGrp].length; j++) {
+                    move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, chokes[padChokeGrp][j], 0]);
+                }
+                chokes[padChokeGrp] = [];
+            }
         }
+        if (padChokeGrp) chokes[padChokeGrp].push(noteOut);
         return;
     }
     /* Pads release */
     if (note >= 68 && note <= 99 && vel === 0) {
         const padIdx = note - 68;
-        selectedKnob = -1;
-        selectedButton = -1;
-        selectedPad = padIdx;
-        selected = 0;
-
         needsRedraw = true;
-        if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[selectedPad].colour);
+        if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[padIdx].colour);
 
         /* send midi */
-        let noteOut = banks[selectedBank].pads[selectedPad].note;
+        let noteOut = banks[selectedBank].pads[padIdx].note;
         if (banks[selectedBank].noteoffs) {
             if (banks[selectedBank].shadow) {
                 try {
                     shadow_send_midi_to_dsp([0x80 | channel, noteOut, vel]);
                 } catch {
-                    console.log("Shadow mode MIDI playback not available.")
+                    console.log("Shadow mode MIDI playback not available.");
                 }
             } else {
                 move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
@@ -850,7 +874,7 @@ function onMidiMessage(msg, source) {
                 try {
                     shadow_send_midi_to_dsp([status | channel, data1, data2]);
                 } catch {
-                    console.log("Shadow mode MIDI playback not available.")
+                    console.log("Shadow mode MIDI playback not available.");
                 }
             } else {
                 move_midi_external_send([cable << 4 | (status / 16), status | channel, data1, data2]);
