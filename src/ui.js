@@ -77,7 +77,7 @@ const DEFAULTS = {
     BANK: {
         CHANNEL: 1,
         LEVEL: 100,
-        SHADOW: 1,
+        SHADOW: 0,
         NOTEOFFS: 1,
         OVERLAY: 1,
         NAME: "(empty)"
