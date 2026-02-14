@@ -53,6 +53,37 @@ const ALL_BUTTONS = [MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoop, MoveM
 const WHITE_BUTTONS = [MoveCapture, MoveLoop, MoveMute, MoveDelete, MoveCopy, MoveUndo, MoveUp, MoveLeft, MoveRight, MoveDown];
 const BUTTON_NAMES = ["Play", "Rec", "Capture", "Record", "Loop", "Mute", "Delete", "Copy", "Undo", "Up", "Left", "Right", "Down"];
 
+/* Default values */
+const DEFAULTS = {
+    PAD: {
+        NOTE_OFFSET: 36,
+        LEVEL: 100,
+        COLOUR: Black,
+        CHOKEGRP: 0,
+        NAME: "(empty)"
+    },
+    KNOB: {
+        VALUE: 0,
+        CC_OFFSET: 71,
+        MIN: 0,
+        MAX: 127,
+        RELATIVE: 0,
+        COLOUR: Black,
+        NAME: "(empty)"
+    },
+    BUTTON: {
+        COLOUR: Black
+    },
+    BANK: {
+        CHANNEL: 1,
+        LEVEL: 100,
+        SHADOW: 1,
+        NOTEOFFS: 1,
+        OVERLAY: 1,
+        NAME: "(empty)"
+    }
+};
+
 /* ============================================================================
  * State
  * ============================================================================ */
@@ -168,11 +199,10 @@ function saveConfig() {
 
 /* Query knob mapping info and show overlay */
 function showKnobOverlay(knobNum, val = "") {
-    let name = banks[selectedBank].knobs[knobNum].name;
-    if (name === "(empty)") name = "";
+    const name = banks[selectedBank].knobs[knobNum].name;
+    const cc = banks[selectedBank].knobs[knobNum].cc;
 
     let value = val;
-    const cc = banks[selectedBank].knobs[knobNum].cc;
     if (banks[selectedBank].knobs[knobNum].relative) {
         if (val === 127) value = "---";
         if (val === 1) value = "+++";
@@ -180,37 +210,38 @@ function showKnobOverlay(knobNum, val = "") {
         value = banks[selectedBank].knobs[knobNum].value;
     }
 
-    showOverlay(`CC: ${cc} ${name} `, value);
+    const displayName = (name !== DEFAULTS.KNOB.NAME) ? name : `Knob ${knobNum + 1}`;
+    showOverlay(displayName, `${value} CC: ${cc} `);
     return true;
 }
 
 /* Query button mapping info and show overlay */
-function showButtonOverlay(buttonNum) {
-    let name = banks[selectedBank].buttons[buttonNum].name;
-    if (name === "(empty)") name = "";
-
+function showButtonOverlay(buttonNum, val = "") {
+    const name = banks[selectedBank].buttons[buttonNum].name;
     const cc = banks[selectedBank].buttons[buttonNum].cc;
-
-    showOverlay(`CC: ${cc}`, name);
+    let value = val;
+    if (val === 127) value = "On";
+    if (val === 0) value = "Off";
+    const displayName = (name !== BUTTON_NAMES[buttonNum]) ? name : BUTTON_NAMES[buttonNum];
+    showOverlay(displayName, `${value} CC: ${cc}`);
     return true;
 }
 
 /* Query pad mapping info and show overlay */
 function showPadOverlay(padNum, vel) {
     let name = banks[selectedBank].pads[padNum].name;
-    if (name === "(empty)") name = "";
-
     const note = banks[selectedBank].pads[padNum].note;
-
-    showOverlay(`Note: ${midiNotes[note]} (${note})`, `${vel} ${name}`);
+    const noteInfo = `Note: ${midiNotes[note]} (${note})`;
+    const displayName = (name !== DEFAULTS.PAD.NAME) ? name : noteInfo;
+    showOverlay(displayName, `${vel} Pad: ${padNum + 1}`);
     return true;
 }
 
 /* Query step mapping info and show overlay */
 function showStepOverlay(stepNum) {
     let name = banks[stepNum].name;
-    if (name === "(empty)") name = stepNum + 1;
-    showOverlay("Bank changed", name);
+    const displayName = (name !== DEFAULTS.BANK.NAME) ? name : `Bank ${stepNum + 1}`;
+    showOverlay("Bank changed", displayName);
     return true;
 }
 
