@@ -264,8 +264,8 @@ function showKnobOverlay(knobNum, val = "") {
         value = banks[selectedBank].knobs[knobNum].value;
     }
 
-    const displayName = (name !== DEFAULTS.KNOB.NAME) ? name : `Knob ${knobNum + 1}`;
-    showOverlay(displayName, `${value} CC: ${cc} `);
+    const displayName = (name !== DEFAULTS.KNOB.NAME) ? name : `Knob: ${knobNum + 1}`;
+    showOverlay(displayName, `${value}  CC: ${cc}`);
     return true;
 }
 
@@ -277,7 +277,7 @@ function showButtonOverlay(buttonNum, val = "") {
     if (val === 127) value = "On";
     if (val === 0) value = "Off";
     const displayName = (name !== BUTTON_NAMES[buttonNum]) ? name : BUTTON_NAMES[buttonNum];
-    showOverlay(displayName, `${value} CC: ${cc}`);
+    showOverlay(displayName, `${value}  CC: ${cc}`);
     return true;
 }
 
@@ -287,7 +287,7 @@ function showPadOverlay(padNum, vel) {
     const note = banks[selectedBank].pads[padNum].note;
     const noteInfo = `Note: ${midiNotes[note]} (${note})`;
     const displayName = (name !== DEFAULTS.PAD.NAME) ? name : noteInfo;
-    showOverlay(displayName, `${vel} Pad: ${padNum + 1}`);
+    showOverlay(displayName, `${vel}  Pad: ${padNum + 1}`);
     return true;
 }
 
@@ -738,8 +738,8 @@ function handleCC(cc, val) {
                 let knobs = banks[selectedBank].knobs;
                 let colour = getColourForKnobValue(knobs[i].colour, valOut);
                 if (cachedKnobColour[selectedKnob] === colour) return;
-                setButtonLED(i + 71, colour);
-                cachedKnobColour[selectedButton] = colour;
+                move_midi_internal_send([0 << 4 | ((0xB0) / 16), 0xB1, i+71, colour]);
+                cachedKnobColour[selectedKnob] = colour;
 
                 if (banks[selectedBank].overlay) {
                     if (showKnobOverlay(selectedKnob, valOut)) needsRedraw = true;
