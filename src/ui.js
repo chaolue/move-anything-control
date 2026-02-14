@@ -99,7 +99,8 @@ let settingsMenuStack = null;
 
 /*    */
 const CONFIG_LOCATION = "/data/UserData/move-anything/modules/other/control/config.json";
-let banks = [];
+let config = {};
+let banks = new Array(NUM_BANKS);
 let selected = 3;  /* 0 = pad, 1 = knob, 2 = button, 3 = bank */
 let selectedPad = -1;
 let selectedKnob = -1;
@@ -130,71 +131,124 @@ const colourSweeps = [neutralColourSweep, rainbowColourSweep, synthwaveColourSwe
  * Helpers
  * ============================================================================ */
 
+/* Create on-demand bank with defaults */
+function getBank(index) {
+    if (!config[index]) config[index] = {};
+
+    const bank = {
+        get channel() { return config[index].channel ?? DEFAULTS.BANK.CHANNEL; },
+        set channel(v) { config[index].channel = v; },
+        get name() { return config[index].name ?? DEFAULTS.BANK.NAME; },
+        set name(v) { config[index].name = v; },
+        get level() { return config[index].level ?? DEFAULTS.BANK.LEVEL; },
+        set level(v) { config[index].level = v; },
+        get shadow() { return config[index].shadow ?? DEFAULTS.BANK.SHADOW; },
+        set shadow(v) { config[index].shadow = v; },
+        get noteoffs() { return config[index].noteoffs ?? DEFAULTS.BANK.NOTEOFFS; },
+        set noteoffs(v) { config[index].noteoffs = v; },
+        get overlay() { return config[index].overlay ?? DEFAULTS.BANK.OVERLAY; },
+        set overlay(v) { config[index].overlay = v; },
+        pads: getPads(index),
+        knobs: getKnobs(index),
+        buttons: getButtons(index)
+    };
+
+    return bank;
+}
+
+function getPads(bankIndex) {
+    if (!config[bankIndex].pads) config[bankIndex].pads = {};
+
+    /* Helper to ensure pad exists */
+    const ensurePad = (i) => {
+        if (!config[bankIndex].pads[i]) config[bankIndex].pads[i] = {};
+        return config[bankIndex].pads[i];
+    };
+
+    return new Array(NUM_PADS).fill(0).map((_, i) => ({
+        get note() { return config[bankIndex].pads[i]?.note ?? (i + DEFAULTS.PAD.NOTE_OFFSET); },
+        set note(v) { ensurePad(i).note = v; },
+        get name() { return config[bankIndex].pads[i]?.name ?? DEFAULTS.PAD.NAME; },
+        set name(v) { ensurePad(i).name = v; },
+        get colour() { return config[bankIndex].pads[i]?.colour ?? DEFAULTS.PAD.COLOUR; },
+        set colour(v) { ensurePad(i).colour = v; },
+        get level() { return config[bankIndex].pads[i]?.level ?? DEFAULTS.PAD.LEVEL; },
+        set level(v) { ensurePad(i).level = v; },
+        get chokegrp() { return config[bankIndex].pads[i]?.chokegrp ?? DEFAULTS.PAD.CHOKEGRP; },
+        set chokegrp(v) { ensurePad(i).chokegrp = v; }
+    }));
+}
+
+function getKnobs(bankIndex) {
+    if (!config[bankIndex].knobs) config[bankIndex].knobs = {};
+
+    /* Helper to ensure knob exists */
+    const ensureKnob = (i) => {
+        if (!config[bankIndex].knobs[i]) config[bankIndex].knobs[i] = {};
+        return config[bankIndex].knobs[i];
+    };
+
+    return new Array(NUM_KNOBS).fill(0).map((_, i) => ({
+        get value() { return config[bankIndex].knobs[i]?.value ?? DEFAULTS.KNOB.VALUE; },
+        set value(v) { ensureKnob(i).value = v; },
+        get cc() { return config[bankIndex].knobs[i]?.cc ?? (i + DEFAULTS.KNOB.CC_OFFSET); },
+        set cc(v) { ensureKnob(i).cc = v; },
+        get name() { return config[bankIndex].knobs[i]?.name ?? DEFAULTS.KNOB.NAME; },
+        set name(v) { ensureKnob(i).name = v; },
+        get colour() { return config[bankIndex].knobs[i]?.colour ?? DEFAULTS.KNOB.COLOUR; },
+        set colour(v) { ensureKnob(i).colour = v; },
+        get min() { return config[bankIndex].knobs[i]?.min ?? DEFAULTS.KNOB.MIN; },
+        set min(v) { ensureKnob(i).min = v; },
+        get max() { return config[bankIndex].knobs[i]?.max ?? DEFAULTS.KNOB.MAX; },
+        set max(v) { ensureKnob(i).max = v; },
+        get relative() { return config[bankIndex].knobs[i]?.relative ?? DEFAULTS.KNOB.RELATIVE; },
+        set relative(v) { ensureKnob(i).relative = v; }
+    }));
+}
+
+function getButtons(bankIndex) {
+    if (!config[bankIndex].buttons) config[bankIndex].buttons = {};
+
+    /* Helper to ensure button exists */
+    const ensureButton = (i) => {
+        if (!config[bankIndex].buttons[i]) config[bankIndex].buttons[i] = {};
+        return config[bankIndex].buttons[i];
+    };
+
+    return new Array(ALL_BUTTONS.length).fill(0).map((_, i) => ({
+        get orig_cc() { return config[bankIndex].buttons[i]?.orig_cc ?? ALL_BUTTONS[i]; },
+        set orig_cc(v) { ensureButton(i).orig_cc = v; },
+        get cc() { return config[bankIndex].buttons[i]?.cc ?? ALL_BUTTONS[i]; },
+        set cc(v) { ensureButton(i).cc = v; },
+        get name() { return config[bankIndex].buttons[i]?.name ?? BUTTON_NAMES[i]; },
+        set name(v) { ensureButton(i).name = v; },
+        get colour() { return config[bankIndex].buttons[i]?.colour ?? DEFAULTS.BUTTON.COLOUR; },
+        set colour(v) { ensureButton(i).colour = v; }
+    }));
+}
+
 function defaultConfig() {
-    /* Pad, Knob, Button, and Bank initial state */
-    let banks = [];
-    for (let s = 0; s < NUM_BANKS; s++) {
-        let pads = [];
-        for (let p = 0; p < NUM_PADS; p++) {
-            pads.push({
-                note: p + 36,
-                name: "(empty)",
-                colour: Black,
-                level: 100
-            });
-        }
-
-        let knobs = [];
-        for (let k = 0; k < NUM_KNOBS; k++) {
-            knobs.push({
-                value: 0,
-                cc: k + 71,
-                name: "(empty)",
-                colour: Black,
-                min: 0,
-                max: 127,
-                relative: 0,
-            });
-        }
-
-        let buttons = [];
-        for (let b = 0; b < ALL_BUTTONS.length; b++) {
-            buttons.push({
-                orig_cc: ALL_BUTTONS[b],
-                cc: ALL_BUTTONS[b],
-                name: BUTTON_NAMES[b],
-                colour: Black
-            });
-        }
-
-        banks.push({
-            channel: 1,
-            name: "(empty)",
-            level: 100,
-            shadow: 1,
-            noteoffs: 1,
-            overlay: 1,
-            pads: pads,
-            knobs: knobs,
-            buttons: buttons
-        });
+    /* No longer creates full config - just ensures banks array is populated with getters */
+    for (let i = 0; i < NUM_BANKS; i++) {
+        banks[i] = getBank(i);
     }
-
-    return banks;
 }
 
 function loadConfig() {
     if (host_file_exists(CONFIG_LOCATION)) {
-        return JSON.parse(host_read_file(CONFIG_LOCATION));
+        config = JSON.parse(host_read_file(CONFIG_LOCATION));
+        console.log("Loaded config");
     } else {
-        console.log("Empty Config Loaded");
-        return defaultConfig();
+        config = {};
+        console.log("Starting with empty config");
     }
+    defaultConfig();
+    return banks;
 }
 
 function saveConfig() {
     console.log("Save Config File");
-    host_write_file(CONFIG_LOCATION, JSON.stringify(banks));
+    host_write_file(CONFIG_LOCATION, JSON.stringify(config));
 }
 
 /* Query knob mapping info and show overlay */
@@ -634,7 +688,7 @@ function handleCC(cc, val) {
 
             /* Query the button mapping info and show overlay */
             if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) {
-                if (showButtonOverlay(selectedButton)) needsRedraw = true;
+                if (showButtonOverlay(selectedButton, val)) needsRedraw = true;
             }
             return;
         }
