@@ -121,7 +121,8 @@ function defaultConfig() {
                 name: "(empty)",
                 colour: Black,
                 min: 0,
-                max: 127
+                max: 127,
+                relative: 0,
             });
         }
 
@@ -136,7 +137,7 @@ function defaultConfig() {
         }
 
         banks.push({
-            midi_ch: 1,
+            channel: 1,
             name: "(empty)",
             level: 100,
             shadow: 1,
@@ -313,7 +314,7 @@ function drawMainView() {
 
 /* Build settings menu items using shared menu item creators */
 function getSettingsItems() {
-    if (selected === 0) {
+    if (selected === 0) {  // pad config
         return [
             createValue('Note', {
                 get: () => banks[selectedBank].pads[selectedPad].note || 0,
@@ -352,7 +353,7 @@ function getSettingsItems() {
                 format: (v) => `${v}`
             }),
         ];
-    } else if (selected === 1){
+    } else if (selected === 1) {  // knob config
         return [
             createValue('CC', {
                 get: () => banks[selectedBank].knobs[selectedKnob].cc || 0,
@@ -395,7 +396,7 @@ function getSettingsItems() {
                 }
             })
         ];
-    } else if (selected === 2){
+    } else if (selected === 2) {  // button config
         return [
             createValue('CC', {
                 get: () => banks[selectedBank].buttons[selectedButton].cc || 0,
@@ -417,7 +418,7 @@ function getSettingsItems() {
                 // format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
             })
         ];
-    } else {
+    } else {  // bank config
         return [
             createValue('MIDI Chan', {
                 get: () => banks[selectedBank].channel || 1,
