@@ -791,18 +791,16 @@ function handleNote(note, vel) {
         /* choke group handling */
         let padChokeGrp = banks[selectedBank].pads[selectedPad].chokegrp;
         if (padChokeGrp) {
-            if (typeof chokes[padChokeGrp] === 'undefined') chokes[padChokeGrp] = [];
-            chokes[padChokeGrp] = chokes[padChokeGrp].filter(item => !(item === noteOut)); //remove current pad if exists
+            if (typeof chokes[padChokeGrp] === 'undefined') chokes[padChokeGrp] = -1;
+            if (chokes[padChokeGrp] === noteOut) chokes[padChokeGrp] = -1; //remove current pad if exists
         }
         /* send midi */
         if (banks[selectedBank].shadow) {
             try {
                 shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
                 if (chokes[padChokeGrp]) {
-                    for (var i = 0; i < chokes[padChokeGrp].length; i++) {
-                        shadow_send_midi_to_dsp([0x80 | channel, chokes[padChokeGrp][i], 0]);
-                    }
-                    chokes[padChokeGrp] = [];
+                    shadow_send_midi_to_dsp([0x80 | channel, chokes[padChokeGrp], 0]);
+                    chokes[padChokeGrp] = -1;
                 }
             } catch {
                 console.log("Shadow mode MIDI playback not available.");
@@ -810,13 +808,11 @@ function handleNote(note, vel) {
         } else {
             move_midi_external_send([cable << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
             if (chokes[padChokeGrp]) {
-                for (var j = 0; j < chokes[padChokeGrp].length; j++) {
-                    move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, chokes[padChokeGrp][j], 0]);
-                }
-                chokes[padChokeGrp] = [];
+                move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, chokes[padChokeGrp], 0]);
+                chokes[padChokeGrp] = -1;
             }
         }
-        if (padChokeGrp) chokes[padChokeGrp].push(noteOut);
+        if (padChokeGrp) chokes[padChokeGrp] = noteOut;
         return;
     }
     /* Pads release */
