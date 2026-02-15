@@ -119,7 +119,7 @@ Press a step button:
 
 | Setting | Range | Description |
 |---------|-------|-------------|
-| **MIDI Chan** | 1-16 | MIDI channel for this bank |
+| **MIDI Channel** | 1-16 | MIDI channel for this bank |
 | **Name** | Text | Custom name for the bank |
 | **Master Pad Level** | 0-200% | Velocity multiplier for all pads |
 | **Min Pad Level** | 0-127 | Velocity minimum for all pads |
@@ -167,7 +167,7 @@ Control how sensitive pads are to your playing dynamics:
 - 100% = Normal (default)
 - 200% = Double velocity
 
-**Mast Pad Level (per bank):**
+**Master Pad Level (per bank):**
 - Multiplies ALL pad velocities in the bank
 
 **Min Pad Level (per bank):**
@@ -183,7 +183,7 @@ Output Velocity = Input × (Pad Level / 100) × (Master Level / 100) > Minimum P
 Input: 100
 Pad Level: 90%
 Master Level: 150%
-Output: 100 × 0.9 × 1.5 = 135 (capped at 127)
+Output: 100 × 0.9 × 1.5 = 135 (max capped at 127, min at Bank's Min Pad Level)
 ```
 
 ### Shadow Mode
@@ -267,13 +267,13 @@ Your configuration is stored in:
 ### Default Settings
 
 **New Pad Defaults:**
-- Note: 36 + pad number (C1 to C3)
+- Note: 35 + pad number (C1 to C3)
 - Colour: Black (0)
 - Level: 100%
 - Choke Group: 0 (disabled)
 
 **New Knob Defaults:**
-- CC: 71 + knob number (CC71-CC79)
+- CC: 70 + knob number (CC71-CC79)
 - Range: 0-127
 - Mode: Absolute
 - Colour: Neutral (0)
