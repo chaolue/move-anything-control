@@ -250,7 +250,7 @@ Knob LEDs change brightness based on value!
 
 Your configuration is stored in:
 ```
-/data/UserData/move-anything/modules/other/control/config.json
+/data/UserData/move-anything/modules/overtake/control/config.json
 ```
 
 **To backup:**

@@ -100,7 +100,7 @@ let settingsMenuState = null;
 let settingsMenuStack = null;
 
 /*    */
-const CONFIG_LOCATION = "/data/UserData/move-anything/modules/other/control/config.json";
+const CONFIG_LOCATION = "/data/UserData/move-anything/modules/overtake/control/config.json";
 let config = {};
 let banks = new Array(NUM_BANKS);
 let selected = 3;  /* 0 = pad, 1 = knob, 2 = button, 3 = bank */
@@ -659,7 +659,7 @@ function handleCC(cc, val) {
             settingsMenuStack = null;  /* Reset for next time */
         } else {
             saveConfig();
-            host_return_to_menu();
+            host_return_to_menu(); // need to fix as this causes a crash in shadow mode
         }
         needsRedraw = true;
         return;
