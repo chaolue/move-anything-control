@@ -254,8 +254,8 @@ Your configuration is stored in:
 ```
 
 **To backup:**
-1. Connect Move to computer
-2. Copy the config.json file
+1. Connect to Move (move.local) from computer using SCP/SFTP client (CyberDuck, WinSCP, Filezilla, etc.)
+2. Copy off the config.json file
 3. Store it safely
 
 **To restore:**
