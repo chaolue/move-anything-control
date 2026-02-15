@@ -67,7 +67,7 @@ Through the Move Everything store. Or manually:
 
 ### Navigation
 - **Menu** = Enter settings
-- **Back** = Exit settings
+- **Back** = Exit settings / Exit Control (when not in settings)
 - **Jog wheel** = Scroll
 - **Click jog** = Edit/Save
 - **Step 1-16** = Change banks
