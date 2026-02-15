@@ -77,6 +77,7 @@ const DEFAULTS = {
     BANK: {
         CHANNEL: 1,
         LEVEL: 100,
+        MIN: 0,
         SHADOW: 0,
         NOTEOFFS: 1,
         OVERLAY: 1,
@@ -142,6 +143,8 @@ function getBank(index) {
         set name(v) { config[index].name = v; },
         get level() { return config[index].level ?? DEFAULTS.BANK.LEVEL; },
         set level(v) { config[index].level = v; },
+        get min() { return config[index].min ?? DEFAULTS.BANK.MIN; },
+        set min(v) { config[index].min = v; },
         get shadow() { return config[index].shadow ?? DEFAULTS.BANK.SHADOW; },
         set shadow(v) { config[index].shadow = v; },
         get noteoffs() { return config[index].noteoffs ?? DEFAULTS.BANK.NOTEOFFS; },
@@ -516,13 +519,20 @@ function getSettingsItems() {
                 get: () => banks[selectedBank].name || "(empty)",
                 set: (v) => { needsRedraw = true; }
             }),
-            createValue('Master Pad Level', {
+            createValue('Mast Pad Level', {
                 get: () => banks[selectedBank].level || 100,
                 set: (v) => { banks[selectedBank].level = v; },
                 min: 0,
                 max: 200,
                 step: 1,
                 format: (v) => `${v}%`
+            }),
+            createValue('Min Pad Level', {
+                get: () => banks[selectedBank].min || 0,
+                set: (v) => { banks[selectedBank].min = v; },
+                min: 0,
+                max: 127,
+                step: 1
             }),
             createToggle('Use Shadow Synths', {
                 get: () => banks[selectedBank].shadow ?? 0,
@@ -866,9 +876,11 @@ function handleNote(note, vel) {
 
         /* edit velocity */
         let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
-        let masterLevel = banks[selectedBank].level || 100;
-        let velOut = Math.round(vel * (padLevel/100) * (masterLevel/100));
+        let masPadLevel = banks[selectedBank].level || 100;
+        let minPadLevel = banks[selectedBank].min || 0;
+        let velOut = Math.round(vel * (padLevel/100) * (masPadLevel/100));
         if (velOut > 127) velOut = 127;
+        if (velOut < minPadLevel) velOut = minPadLevel;
 
         if (viewMode === VIEW_MAIN) setLED(note, White);
         if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);

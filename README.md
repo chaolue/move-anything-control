@@ -121,7 +121,8 @@ Press a step button:
 |---------|-------|-------------|
 | **MIDI Chan** | 1-16 | MIDI channel for this bank |
 | **Name** | Text | Custom name for the bank |
-| **Master Pad Level** | 0-200% | Velocity multiplier for all pads |
+| **Mast Pad Level** | 0-200% | Velocity multiplier for all pads |
+| **Min Pad Level** | 0-127 | Velocity minimum for all pads |
 | **Use Shadow Synths** | On/Off | Route to Move's internal synths |
 | **Note Offs** | On/Off | Send note-off messages |
 | **Show Overlay** | On/Off | Display info when pressing pads/knobs |
@@ -165,12 +166,15 @@ Control how sensitive pads are to your playing dynamics:
 - 100% = Normal (default)
 - 200% = Double velocity
 
-**Master Pad Level (per bank):**
+**Mast Pad Level (per bank):**
 - Multiplies ALL pad velocities in the bank
+
+**Min Pad Level (per bank):**
+- Minimum velocity of ALL pads in the bank
 
 **Formula:**
 ```
-Output Velocity = Input × (Pad Level / 100) × (Master Level / 100)
+Output Velocity = Input × (Pad Level / 100) × (Master Level / 100) > Minimum Pad Level || Minimum Pad Level
 ```
 
 **Example:**
