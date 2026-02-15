@@ -66,7 +66,7 @@ Through the Move Everything store. Or manually:
 **Press the Menu button** to enter settings mode.
 
 ### Navigation
-- **Menu** = Enter settings
+- **Menu** = Enter/exit settings
 - **Back** = Exit settings / Exit Control (when not in settings)
 - **Jog wheel** = Scroll
 - **Click jog** = Edit/Save
@@ -80,7 +80,7 @@ Select a pad (press it):
 |---------|-------|-------------|
 | **Note** | 0-127 | MIDI note number to send |
 | **Name** | Text | Custom name for the pad |
-| **Colour** | 0-127 | LED color (see color chart) |
+| **Colour** | 0-127 | LED colour  |
 | **Pad Level** | 0-200% | Velocity multiplier |
 | **Choke Grp** | 0-8 | Choke group (0 = none) |
 
@@ -98,20 +98,20 @@ Touch a knob:
 |---------|-------|-------------|
 | **CC** | 0-127 | MIDI CC number to send |
 | **Name** | Text | Custom name for the knob |
-| **Colour** | 0-3 | LED color scheme |
+| **Colour** | 0-3 | LED colour scheme |
 | **Min Value** | 0-127 | Minimum output value |
 | **Max Value** | 0-127 | Maximum output value |
 | **CC Relative** | On/Off | Relative mode (for endless encoders) |
 
 ### Button Settings
 
-Press a button:
+Press a button (except Menu, Back or Shift):
 
 | Setting | Range | Description |
 |---------|-------|-------------|
 | **CC** | 0-127 | MIDI CC number to send |
 | **Name** | Text | Custom name for the button |
-| **Colour** | 0-127 | LED color |
+| **Colour** | 0-127 | LED colour |
 
 ### Bank Settings
 
@@ -121,15 +121,16 @@ Press a step button:
 |---------|-------|-------------|
 | **MIDI Chan** | 1-16 | MIDI channel for this bank |
 | **Name** | Text | Custom name for the bank |
-| **Mast Pad Level** | 0-200% | Velocity multiplier for all pads |
+| **Master Pad Level** | 0-200% | Velocity multiplier for all pads |
 | **Min Pad Level** | 0-127 | Velocity minimum for all pads |
 | **Use Shadow Synths** | On/Off | Route to Move's internal synths |
 | **Note Offs** | On/Off | Send note-off messages |
 | **Show Overlay** | On/Off | Display info when pressing pads/knobs |
+| **Pad H/light Colour** | 99-127 | Pad press highlight colour (default: white) |
 
 ### Visual Feedback
 - **White pulse** = Item is selected (in settings)
-- **White flash** = Pad is pressed
+- **White flash** = Pad is pressed (white is the default highlight colour, this can be changed in Bank settings)
 - **Knob LEDs** = Show current value
 - **Step LEDs** = Show active bank (white) vs inactive (gray)
 
@@ -221,11 +222,11 @@ Output: 100 × 0.9 × 1.5 = 135 (capped at 127)
 - Perfect for controlling plugins with existing values
 - Good for volume/filter controls
 
-### Color Schemes
+### Colour Schemes
 
-**Pads & Buttons:** 0-127 individual colors
+**Pads & Buttons:** 0-127 individual colours
 
-**Knobs:** 4 color schemes (0-3)
+**Knobs:** 4 colour schemes (0-3)
 - **Scheme 0:** Neutral grays
 - **Scheme 1:** Rainbow
 - **Scheme 2:** Synthwave (purple/pink/blue)
@@ -267,7 +268,7 @@ Your configuration is stored in:
 
 **New Pad Defaults:**
 - Note: 36 + pad number (C1 to C3)
-- Color: Black (0)
+- Colour: Black (0)
 - Level: 100%
 - Choke Group: 0 (disabled)
 
@@ -275,16 +276,18 @@ Your configuration is stored in:
 - CC: 71 + knob number (CC71-CC79)
 - Range: 0-127
 - Mode: Absolute
-- Color: Neutral (0)
+- Colour: Neutral (0)
 
 **New Button Defaults:**
 - CC: Original Move function CC
-- Color: Black (0)
+- Colour: Black (0)
 - Name: Original Move function name
 
 **New Bank Defaults:**
 - MIDI Channel: 1
-- Master Level: 100%
+- Master Pad Level: 100%
+- Min Pad Level: 0
 - Shadow Mode: Off
 - Note-Offs: On
 - Show Overlay: On
+- Pad H/light Colour: White

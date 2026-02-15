@@ -81,7 +81,8 @@ const DEFAULTS = {
         SHADOW: 0,
         NOTEOFFS: 1,
         OVERLAY: 1,
-        NAME: "(empty)"
+        NAME: "(empty)",
+        HIGHLIGHTCOLOUR: White
     }
 };
 
@@ -151,6 +152,8 @@ function getBank(index) {
         set noteoffs(v) { config[index].noteoffs = v; },
         get overlay() { return config[index].overlay ?? DEFAULTS.BANK.OVERLAY; },
         set overlay(v) { config[index].overlay = v; },
+        get hlcolour() { return config[index].hlcolour ?? DEFAULTS.BANK.HIGHLIGHTCOLOUR; },
+        set hlcolour(v) { config[index].hlcolour = v; },
         pads: getPads(index),
         knobs: getKnobs(index),
         buttons: getButtons(index)
@@ -508,7 +511,7 @@ function getSettingsItems() {
         ];
     } else {  // bank config
         return [
-            createValue('MIDI Chan', {
+            createValue('MIDI Channel', {
                 get: () => banks[selectedBank].channel || 1,
                 set: (v) => { banks[selectedBank].channel = v; },
                 min: 1,
@@ -519,7 +522,7 @@ function getSettingsItems() {
                 get: () => banks[selectedBank].name || "(empty)",
                 set: (v) => { needsRedraw = true; }
             }),
-            createValue('Mast Pad Level', {
+            createValue('Master Pad Level', {
                 get: () => banks[selectedBank].level || 100,
                 set: (v) => { banks[selectedBank].level = v; },
                 min: 0,
@@ -545,6 +548,14 @@ function getSettingsItems() {
             createToggle('Show Overlay', {
                 get: () => banks[selectedBank].overlay ?? 1,
                 set: (v) => { banks[selectedBank].overlay = v ? 1 : 0; }
+            }),
+            createValue('Pad H/light Colour', {
+                get: () => banks[selectedBank].hlcolour || White,
+                set: (v) => { banks[selectedBank].hlcolour = v; },
+                min: 99,
+                max: 127,
+                step: 1,
+                format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
             })
         ];
     }
@@ -873,16 +884,17 @@ function handleNote(note, vel) {
         selectedPad = padIdx;
         selected = 0;
         let noteOut = banks[selectedBank].pads[selectedPad].note;
+        const highlightColour = banks[selectedBank].hlcolour;
 
         /* edit velocity */
         let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
-        let masPadLevel = banks[selectedBank].level || 100;
+        let masterPadLevel = banks[selectedBank].level || 100;
         let minPadLevel = banks[selectedBank].min || 0;
-        let velOut = Math.round(vel * (padLevel/100) * (masPadLevel/100));
+        let velOut = Math.round(vel * (padLevel/100) * (masterPadLevel/100));
         if (velOut > 127) velOut = 127;
         if (velOut < minPadLevel) velOut = minPadLevel;
 
-        if (viewMode === VIEW_MAIN) setLED(note, White);
+        if (viewMode === VIEW_MAIN) setLED(note, highlightColour);
         if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
         needsRedraw = true;
 
