@@ -43,12 +43,12 @@ jobs:
           # Save install_path before switching branches
           INSTALL_PATH=$(jq -r '.install_path // empty' release.json 2>/dev/null || echo "")
 
-          git fetch origin master
-          git checkout -f master
+          git fetch origin main
+          git checkout -f main
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Recreate release.json on master
+          # Recreate release.json on main
           if [ -n "$INSTALL_PATH" ]; then
             cat > release.json << EOF
           {
@@ -68,4 +68,4 @@ jobs:
 
           git add release.json
           git commit -m "chore: update release.json for ${{ github.ref_name }}" || echo "No changes to commit"
-          git push origin master
+          git push origin main
