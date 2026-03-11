@@ -16,7 +16,7 @@ Customisable MIDI controller for use on Ableton Move with Move Everything instal
 - Change knobs between relative or absolute values
 - Assign a name to banks, pads, knobs and buttons
 - Adjust bank to not send MIDI note offs for pads (for drums)
-- Open in Standalone (Shift + MastVol + Vol8) or Overtake Mode (Shift + MastVol + JogWheelClick)
+- Open in Overtake Mode (Shift + MastVol + JogClick)
 - Play Shadow Synths while in Overtake Mode on MIDI channel they are set to
 
 ## Building
@@ -36,11 +36,7 @@ Through the Move Everything store. Or manually:
 
 ## Quick Start Guide
 
-### 1. Launch the Controller in Standalone Mode
-- Open **Move Everything** Standalone Mode (Shift + MastVol + Vol8)
-- Navigate to **Other → Custom MIDI Control**
-
-### Or 1. Launch the Controller in Overtake Mode
+### 1. Launch the Controller in Overtake Mode
 - Open **Move Everything** Overtake Mode (Shift + MastVol + JogWheelClick)
 - Navigate to **Custom MIDI Control**
 
@@ -126,7 +122,7 @@ Press a step button:
 | **Use Shadow Synths** | On/Off | Route to Move's internal synths |
 | **Note Offs** | On/Off | Send note-off messages |
 | **Show Overlay** | On/Off | Display info when pressing pads/knobs |
-| **Pad H/light Colour** | 99-127 | Pad press highlight colour (default: white) |
+| **H/light Colour** | 0-127 | Pad press highlight colour (default: white, 0: no highlight) |
 
 ### Visual Feedback
 - **White pulse** = Item is selected (in settings)
@@ -290,4 +286,4 @@ Your configuration is stored in:
 - Shadow Mode: Off
 - Note-Offs: On
 - Show Overlay: On
-- Pad H/light Colour: White
+- H/light Colour: White

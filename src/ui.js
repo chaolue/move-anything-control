@@ -10,10 +10,9 @@ import { MoveBack, MoveMenu, MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoo
          MoveKnob5, MoveKnob6, MoveKnob7, MoveKnob8, MoveMaster, MoveCCButtons,
          White, Black, BrightRed, BrightGreen, OrangeRed, Cyan, DarkGrey, WhiteLedDim, WhiteLedBright,
          colourNames, MovePads, midiNotes} from '/data/UserData/move-anything/shared/constants.mjs';
-import { drawMenuHeader, showOverlay, tickOverlay, drawOverlay,
-         dismissOverlayOnInput } from '/data/UserData/move-anything/shared/menu_layout.mjs';
-import { createTextScroller } from '/data/UserData/move-anything/shared/text_scroll.mjs';
-import { createValue, createToggle } from '/data/UserData/move-anything/shared/menu_items.mjs';
+import { drawMenuHeader, drawMenuList, drawMenuFooter, showOverlay, tickOverlay, drawOverlay,
+         dismissOverlayOnInput, menuLayoutDefaults } from '/data/UserData/move-anything/shared/menu_layout.mjs';
+import { createValue, createToggle, formatItemValue } from '/data/UserData/move-anything/shared/menu_items.mjs';
 import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/shared/menu_nav.mjs';
 import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
 import { drawStackMenu } from '/data/UserData/move-anything/shared/menu_render.mjs';
@@ -115,11 +114,7 @@ let cable = 2;
 let shiftHeld = false;
 let needsRedraw = true;
 let tickCount = 0;
-let maxChars = 10;
 const REDRAW_INTERVAL = 6;
-
-/* Text scroller for selected track's patch name */
-const nameScroller = createTextScroller();
 
 /* Colour sweeps */
 const cachedKnobColour = {};
@@ -128,6 +123,7 @@ const rainbowColourSweep = [33, 16, 15, 14, 11, 8, 3, 2];
 const synthwaveColourSweep = [104, 105, 20, 21, 23, 26, 25];
 const roseColourSweep = [124, 35, 23, 26, 25];
 const colourSweeps = [neutralColourSweep, rainbowColourSweep, synthwaveColourSweep, roseColourSweep];
+const colourSweepNames = ['neutral', 'rainbow', 'synthwave', 'roseColour'];
 
 /* ============================================================================
  * Helpers
@@ -355,9 +351,7 @@ function updateLEDs() {
     /* Pad LEDs  */
     let pads = banks[selectedBank].pads;
     for (let i = 0; i < NUM_PADS; i++) {
-        let colour = Black;
-        if (pads[i].colour) colour = pads[i].colour;
-        setLED(i + 68, colour);
+        setLED(i + 68, pads[i].colour ?? Black);
     }
 
     /* Knob LEDs  */
@@ -371,10 +365,7 @@ function updateLEDs() {
     /* Button LEDs  */
     let buttons = banks[selectedBank].buttons;
     for (let i = 0; i < ALL_BUTTONS.length; i++) {
-        let buttonCC = ALL_BUTTONS[i];
-        let colour = Black;
-        if (buttons[i].colour) colour = buttons[i].colour;
-        setButtonLED(buttonCC, colour);
+        setButtonLED(ALL_BUTTONS[i], buttons[i].colour ?? Black);
     }
 
     /* Bank LEDs  */
@@ -408,7 +399,7 @@ function getSettingsItems() {
     if (selected === 0) {  // pad config
         return [
             createValue('Note', {
-                get: () => banks[selectedBank].pads[selectedPad].note || 0,
+                get: () => banks[selectedBank].pads[selectedPad].note ?? 0,
                 set: (v) => { banks[selectedBank].pads[selectedPad].note = v; },
                 min: 0,
                 max: 127,
@@ -420,15 +411,15 @@ function getSettingsItems() {
                 set: (v) => { needsRedraw = true; }
             }),
             createValue('Colour', {
-                get: () => banks[selectedBank].pads[selectedPad].colour || 0,
+                get: () => banks[selectedBank].pads[selectedPad].colour ?? 0,
                 set: (v) => { banks[selectedBank].pads[selectedPad].colour = v; },
                 min: 0,
                 max: 127,
                 step: 1,
-                format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
+                format: (v) => `${colourNames[v]}`
             }),
             createValue('Pad Level', {
-                get: () => banks[selectedBank].pads[selectedPad].level || 100,
+                get: () => banks[selectedBank].pads[selectedPad].level ?? 100,
                 set: (v) => { banks[selectedBank].pads[selectedPad].level = v; },
                 min: 0,
                 max: 200,
@@ -436,7 +427,7 @@ function getSettingsItems() {
                 format: (v) => `${v}%`
             }),
             createValue('Choke Grp', {
-                get: () => banks[selectedBank].pads[selectedPad].chokegrp || 0,
+                get: () => banks[selectedBank].pads[selectedPad].chokegrp ?? 0,
                 set: (v) => { banks[selectedBank].pads[selectedPad].chokegrp = v; },
                 min: 0,
                 max: 8,
@@ -447,8 +438,8 @@ function getSettingsItems() {
     } else if (selected === 1) {  // knob config
         return [
             createValue('CC', {
-                get: () => banks[selectedBank].knobs[selectedKnob].cc || 0,
-                set: (v) => { banks[selectedBank].knobs[selectedKnob].cc = v; } ,
+                get: () => banks[selectedBank].knobs[selectedKnob].cc ?? 0,
+                set: (v) => { banks[selectedBank].knobs[selectedKnob].cc = v; },
                 min: 0,
                 max: 127,
                 step: 1
@@ -458,22 +449,22 @@ function getSettingsItems() {
                 set: (v) => { needsRedraw = true; }
             }),
             createValue('Colour', {
-                get: () => banks[selectedBank].knobs[selectedKnob].colour || 0,
+                get: () => banks[selectedBank].knobs[selectedKnob].colour ?? 0,
                 set: (v) => { banks[selectedBank].knobs[selectedKnob].colour = v; },
                 min: 0,
                 max: colourSweeps.length - 1,
                 step: 1,
-                format: (v) => `Col${v}`
+                format: (v) => `${colourSweepNames[v]}`
             }),
             createValue('Min Value', {
-                get: () => banks[selectedBank].knobs[selectedKnob].min || 0,
+                get: () => banks[selectedBank].knobs[selectedKnob].min ?? 0,
                 set: (v) => { banks[selectedBank].knobs[selectedKnob].min = v; },
                 min: 0,
                 max: 127,
                 step: 1
             }),
             createValue('Max Value', {
-                get: () => banks[selectedBank].knobs[selectedKnob].max || 127,
+                get: () => banks[selectedBank].knobs[selectedKnob].max ?? 127,
                 set: (v) => { banks[selectedBank].knobs[selectedKnob].max = v; },
                 min: 0,
                 max: 127,
@@ -490,8 +481,8 @@ function getSettingsItems() {
     } else if (selected === 2) {  // button config
         return [
             createValue('CC', {
-                get: () => banks[selectedBank].buttons[selectedButton].cc || 0,
-                set: (v) => { banks[selectedBank].buttons[selectedButton].cc = v; } ,
+                get: () => banks[selectedBank].buttons[selectedButton].cc ?? 0,
+                set: (v) => { banks[selectedBank].buttons[selectedButton].cc = v; },
                 min: 0,
                 max: 127,
                 step: 1
@@ -501,12 +492,12 @@ function getSettingsItems() {
                 set: (v) => { needsRedraw = true; }
             }),
             createValue('Colour', {
-                get: () => banks[selectedBank].buttons[selectedButton].colour || 0,
+                get: () => banks[selectedBank].buttons[selectedButton].colour ?? 0,
                 set: (v) => { banks[selectedBank].buttons[selectedButton].colour = v; },
                 min: 0,
                 max: 127,
                 step: 10,
-                // format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
+                format: (v) => `${colourNames[v]}`
             })
         ];
     } else {  // bank config
@@ -523,7 +514,7 @@ function getSettingsItems() {
                 set: (v) => { needsRedraw = true; }
             }),
             createValue('Master Pad Level', {
-                get: () => banks[selectedBank].level || 100,
+                get: () => banks[selectedBank].level ?? 100,
                 set: (v) => { banks[selectedBank].level = v; },
                 min: 0,
                 max: 200,
@@ -531,7 +522,7 @@ function getSettingsItems() {
                 format: (v) => `${v}%`
             }),
             createValue('Min Pad Level', {
-                get: () => banks[selectedBank].min || 0,
+                get: () => banks[selectedBank].min ?? 0,
                 set: (v) => { banks[selectedBank].min = v; },
                 min: 0,
                 max: 127,
@@ -549,13 +540,13 @@ function getSettingsItems() {
                 get: () => banks[selectedBank].overlay ?? 1,
                 set: (v) => { banks[selectedBank].overlay = v ? 1 : 0; }
             }),
-            createValue('Pad H/light Colour', {
-                get: () => banks[selectedBank].hlcolour || White,
+            createValue('H/light Colour', {
+                get: () => banks[selectedBank].hlcolour ?? DEFAULTS.BANK.HIGHLIGHTCOLOUR,
                 set: (v) => { banks[selectedBank].hlcolour = v; },
-                min: 99,
+                min: 0,
                 max: 127,
                 step: 1,
-                format: (v) => `${nameScroller.getScrolledText(colourNames[v], maxChars)}`
+                format: (v) => `${colourNames[v]}`
             })
         ];
     }
@@ -586,20 +577,34 @@ function drawSettingsView() {
         initSettingsMenu();
     }
 
-    /* Update current entry in place — never push during draw */
+    /* Update items on current stack entry */
     const top = settingsMenuStack.current();
     if (top) {
-        top.title = `Settings - ${getSelectedLabel()}`;
         top.items = getSettingsItems();
     }
 
     const footer = settingsMenuState.editing ? 'Jog:Change Clk:Save' : 'Jog:Scroll Clk:Edit';
 
-    drawStackMenu({
-        stack: settingsMenuStack,
-        state: settingsMenuState,
-        footer
+    const bottomY = footer
+        ? menuLayoutDefaults.listBottomWithFooter
+        : menuLayoutDefaults.listBottomNoFooter;
+
+    drawMenuHeader(`Settings - ${getSelectedLabel()}`);
+    drawMenuList({
+        items: top ? top.items : [],
+        selectedIndex: settingsMenuState.selectedIndex,
+        listArea: { topY: menuLayoutDefaults.listTopY, bottomY },
+        valueAlignRight: true,
+        valueX: 32,
+        labelGap: 4,
+        getLabel: (item) => item ? (item.label || '') : '',
+        getValue: (item, index) => {
+            if (!item) return '';
+            const isEditing = settingsMenuState.editing && index === settingsMenuState.selectedIndex;
+            return formatItemValue(item, isEditing, settingsMenuState.editValue);
+        }
     });
+    if (footer) drawMenuFooter(footer);
 }
 
 function draw() {
@@ -659,7 +664,9 @@ function handleCC(cc, val) {
             settingsMenuStack = null;  /* Reset for next time */
         } else {
             saveConfig();
-            host_return_to_menu(); // need to fix as this causes a crash in shadow mode
+            clearAllLEDs();
+            host_exit_module();
+            return;
         }
         needsRedraw = true;
         return;
@@ -894,16 +901,13 @@ function handleNote(note, vel) {
         if (velOut > 127) velOut = 127;
         if (velOut < minPadLevel) velOut = minPadLevel;
 
-        if (viewMode === VIEW_MAIN) setLED(note, highlightColour);
-        if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
-        needsRedraw = true;
-
         /* choke group handling */
         let padChokeGrp = banks[selectedBank].pads[selectedPad].chokegrp;
         if (padChokeGrp) {
             if (typeof chokes[padChokeGrp] === 'undefined') chokes[padChokeGrp] = -1;
             if (chokes[padChokeGrp] === noteOut) chokes[padChokeGrp] = -1; //remove current pad if exists
         }
+
         /* send midi */
         if (banks[selectedBank].shadow) {
             try {
@@ -923,13 +927,14 @@ function handleNote(note, vel) {
             }
         }
         if (padChokeGrp) chokes[padChokeGrp] = noteOut;
+        if (viewMode === VIEW_MAIN && highlightColour != 0) setLED(note, highlightColour);
+        if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
+        needsRedraw = true;
         return;
     }
     /* Pads release */
     if (note >= 68 && note <= 99 && vel === 0) {
         const padIdx = note - 68;
-        needsRedraw = true;
-        if (viewMode === VIEW_MAIN) setLED(note, banks[selectedBank].pads[padIdx].colour);
 
         /* send midi */
         let noteOut = banks[selectedBank].pads[padIdx].note;
@@ -944,6 +949,9 @@ function handleNote(note, vel) {
                 move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, noteOut, vel]);
             }
         }
+
+        if (viewMode === VIEW_MAIN && banks[selectedBank].hlcolour != 0) setLED(note, banks[selectedBank].pads[padIdx].colour);
+        needsRedraw = true;
         return;
     }
 }
@@ -1025,11 +1033,6 @@ function tick() {
         tickTextEntry();
         drawTextEntry();
         return;
-    }
-
-    /* Tick the name scroller */
-    if (nameScroller.tick()) {
-        needsRedraw = true;
     }
 
     /* Periodic state sync and redraw */
