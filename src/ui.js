@@ -15,7 +15,6 @@ import { drawMenuHeader, drawMenuList, drawMenuFooter, showOverlay, tickOverlay,
 import { createValue, createToggle, formatItemValue } from '/data/UserData/move-anything/shared/menu_items.mjs';
 import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/shared/menu_nav.mjs';
 import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
-import { drawStackMenu } from '/data/UserData/move-anything/shared/menu_render.mjs';
 import { openTextEntry, isTextEntryActive, handleTextEntryMidi, drawTextEntry,
          tickTextEntry } from '/data/UserData/move-anything/shared/text_entry.mjs';
 
@@ -432,7 +431,7 @@ function getSettingsItems() {
                 min: 0,
                 max: 8,
                 step: 1,
-                format: (v) => `${v}`
+                format: (v) => v === 0 ? 'Off' : `${v}`
             }),
         ];
     } else if (selected === 1) {  // knob config
@@ -546,7 +545,7 @@ function getSettingsItems() {
                 min: 0,
                 max: 127,
                 step: 1,
-                format: (v) => `${colourNames[v]}`
+                format: (v) => v === 0 ? 'Off' : `${colourNames[v]}`
             })
         ];
     }
@@ -595,7 +594,7 @@ function drawSettingsView() {
         selectedIndex: settingsMenuState.selectedIndex,
         listArea: { topY: menuLayoutDefaults.listTopY, bottomY },
         valueAlignRight: true,
-        valueX: 32,
+        valueX: 40,
         labelGap: 4,
         getLabel: (item) => item ? (item.label || '') : '',
         getValue: (item, index) => {
@@ -894,9 +893,9 @@ function handleNote(note, vel) {
         const highlightColour = banks[selectedBank].hlcolour;
 
         /* edit velocity */
-        let padLevel = banks[selectedBank].pads[selectedPad].level || 100;
-        let masterPadLevel = banks[selectedBank].level || 100;
-        let minPadLevel = banks[selectedBank].min || 0;
+        let padLevel = banks[selectedBank].pads[selectedPad].level ?? 100;
+        let masterPadLevel = banks[selectedBank].level ?? 100;
+        let minPadLevel = banks[selectedBank].min ?? 0;
         let velOut = Math.round(vel * (padLevel/100) * (masterPadLevel/100));
         if (velOut > 127) velOut = 127;
         if (velOut < minPadLevel) velOut = minPadLevel;
@@ -912,7 +911,7 @@ function handleNote(note, vel) {
         if (banks[selectedBank].shadow) {
             try {
                 shadow_send_midi_to_dsp([0x90 | channel, noteOut, velOut]);
-                if (chokes[padChokeGrp]) {
+                if (chokes[padChokeGrp] != -1) {
                     shadow_send_midi_to_dsp([0x80 | channel, chokes[padChokeGrp], 0]);
                     chokes[padChokeGrp] = -1;
                 }
@@ -921,7 +920,7 @@ function handleNote(note, vel) {
             }
         } else {
             move_midi_external_send([cable << 4 | (0x90 / 16), 0x90 | channel, noteOut, velOut]);
-            if (chokes[padChokeGrp]) {
+            if (chokes[padChokeGrp] != -1) {
                 move_midi_external_send([cable << 4 | (0x80 / 16), 0x80 | channel, chokes[padChokeGrp], 0]);
                 chokes[padChokeGrp] = -1;
             }
@@ -983,7 +982,7 @@ function onMidiMessage(msg, source) {
         handleNote(data1, vel);
     } else if (status === 0xA0) {
         if (data2 > 18) {  /* ignore light aftertouch */
-            let channel = banks[selectedBank].channel;
+            let channel = banks[selectedBank].channel - 1;
             if (banks[selectedBank].shadow) {
                 try {
                     shadow_send_midi_to_dsp([status | channel, data1, data2]);
