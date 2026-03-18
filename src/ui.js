@@ -17,6 +17,7 @@ import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/s
 import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
 import { openTextEntry, isTextEntryActive, handleTextEntryMidi, drawTextEntry,
          tickTextEntry } from '/data/UserData/move-anything/shared/text_entry.mjs';
+import * as os from 'os';
 
 /* ============================================================================
  * Constants
@@ -117,7 +118,7 @@ const REDRAW_INTERVAL = 6;
 
 /* Colour sweeps */
 const cachedKnobColour = {};
-const neutralColourSweep = [0, 124, 123, 120];
+const neutralColourSweep = [0, 117, 124, 119, 123, 118, 121, 122, 120];
 const rainbowColourSweep = [33, 16, 15, 14, 11, 8, 3, 2];
 const synthwaveColourSweep = [104, 105, 20, 21, 23, 26, 25];
 const roseColourSweep = [124, 35, 23, 26, 25];
@@ -764,10 +765,10 @@ function handleCC(cc, val) {
             if (viewMode === VIEW_MAIN) {
                 let knobs = banks[selectedBank].knobs;
                 let colour = getColourForKnobValue(knobs[i].colour, valOut);
-                if (cachedKnobColour[selectedKnob] === colour) return;
-                move_midi_internal_send([0 << 4 | ((0xB0) / 16), 0xB1, i+71, colour]);
-                cachedKnobColour[selectedKnob] = colour;
-
+                if (cachedKnobColour[selectedKnob] != colour) {
+                    move_midi_internal_send([0 << 4 | ((0xB0) / 16), 0xB1, i+71, colour]);
+                    cachedKnobColour[selectedKnob] = colour;
+                }
                 if (banks[selectedBank].overlay) {
                     if (showKnobOverlay(selectedKnob, valOut)) needsRedraw = true;
                 }
@@ -955,7 +956,7 @@ function handleNote(note, vel) {
     }
 }
 
-function onMidiMessage(msg, source) {
+function onMidiMessage(msg) {
     if (!msg || msg.length < 3) return;
 
     const status = msg[0] & 0xF0;
@@ -996,9 +997,8 @@ function onMidiMessage(msg, source) {
     }
 }
 
-function midiIgnore(msg, source) {
+function midiIgnore(msg) {
     /* ignore external MIDI messages */
-    return;
 }
 
     /* ============================================================================
@@ -1008,6 +1008,7 @@ function midiIgnore(msg, source) {
 function init() {
     /* Clear LEDs first */
     clearAllLEDs();
+    os.sleep(200);
 
     /* Initial sync */
     banks = loadConfig();
