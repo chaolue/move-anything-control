@@ -109,6 +109,8 @@ let selectedButton = -1;
 let selectedBank = 0;
 let chokes = [];
 let cable = 2;
+const LED_MSGS_PER_TICK = 8;
+const ledQueue = [];
 
 /* UI state */
 let shiftHeld = false;
@@ -348,11 +350,31 @@ function transferPulse(newType, newIndex) {
     }
 }
 
+function enqueueNoteLED(note, colour) {
+    ledQueue.push({ type: 'note', note, colour });
+}
+
+function enqueueCcLED(cc, colour) {
+    ledQueue.push({ type: 'button', cc, colour });
+}
+
+function flushLEDQueue() {
+    const count = Math.min(LED_MSGS_PER_TICK, ledQueue.length);
+    for (let i = 0; i < count; i++) {
+        const msg = ledQueue.shift();
+        if (msg.type === 'note') {
+            setLED(msg.note, msg.colour);
+        } else {
+            setButtonLED(msg.cc, msg.colour);
+        }
+    }
+}
+
 function updateLEDs() {
     /* Pad LEDs  */
     let pads = banks[selectedBank].pads;
     for (let i = 0; i < NUM_PADS; i++) {
-        setLED(i + 68, pads[i].colour ?? Black);
+        enqueueNoteLED(i + 68, pads[i].colour ?? Black);
     }
 
     /* Knob LEDs  */
@@ -360,25 +382,25 @@ function updateLEDs() {
     for (let i = 0; i < NUM_KNOBS; i++) {
         let colour = Black;
         if (knobs[i].value) colour = getColourForKnobValue(knobs[i].colour, knobs[i].value);
-        setButtonLED(i + 71, colour);
+        enqueueCcLED(i + 71, colour);
     }
 
     /* Button LEDs  */
     let buttons = banks[selectedBank].buttons;
     for (let i = 0; i < ALL_BUTTONS.length; i++) {
-        setButtonLED(ALL_BUTTONS[i], buttons[i].colour ?? Black);
+        enqueueCcLED(ALL_BUTTONS[i], buttons[i].colour ?? Black);
     }
 
     /* Bank LEDs  */
     for (let i = 0; i < NUM_BANKS; i++) {
         let colour = DarkGrey;
         if (i === selectedBank) colour = White;
-        setLED(i + 16, colour);
+        enqueueNoteLED(i + 16, colour);
     }
 
     /* Navigation buttons */
-    setButtonLED(CC_MENU, WhiteLedBright);
-    setButtonLED(CC_BACK, WhiteLedBright);
+    enqueueCcLED(CC_MENU, WhiteLedBright);
+    enqueueCcLED(CC_BACK, WhiteLedBright);
 }
 
 /* ============================================================================
@@ -767,7 +789,7 @@ function handleCC(cc, val) {
                 let knobs = banks[selectedBank].knobs;
                 let colour = getColourForKnobValue(knobs[i].colour, valOut);
                 if (cachedKnobColour[selectedKnob] != colour) {
-                    move_midi_internal_send([0 << 4 | ((0xB0) / 16), 0xB1, i+71, colour]);
+                    enqueueCcLED(i+71, colour);
                     cachedKnobColour[selectedKnob] = colour;
                 }
                 if (banks[selectedBank].overlay) {
@@ -798,15 +820,15 @@ function handleCC(cc, val) {
         /* Check if user selected items */
         const item = items[settingsMenuState.selectedIndex];
         if (item && item.label === 'Colour' && settingsMenuState.editing) {
-            if (selected === 0) setLED(MovePads[selectedPad], settingsMenuState.editValue);
-            if (selected === 1) setButtonLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(settingsMenuState.editValue, banks[selectedBank].knobs[selectedKnob].value));
-            if (selected === 2) setButtonLED(ALL_BUTTONS[selectedButton], settingsMenuState.editValue);
+            if (selected === 0) enqueueNoteLED(MovePads[selectedPad], settingsMenuState.editValue);
+            if (selected === 1) enqueueCcLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(settingsMenuState.editValue, banks[selectedBank].knobs[selectedKnob].value));
+            if (selected === 2) enqueueCcLED(ALL_BUTTONS[selectedButton], settingsMenuState.editValue);
             return;
         }
         if (item && item.label === 'Colour' && !settingsMenuState.editing) {
-            if (selected === 0) setLED(MovePads[selectedPad], banks[selectedBank].pads[selectedPad].colour);
-            if (selected === 1) setButtonLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(banks[selectedBank].knobs[selectedKnob].colour, banks[selectedBank].knobs[selectedKnob].value));
-            if (selected === 2) setButtonLED(ALL_BUTTONS[selectedButton], banks[selectedBank].buttons[selectedButton].colour);
+            if (selected === 0) enqueueNoteLED(MovePads[selectedPad], banks[selectedBank].pads[selectedPad].colour);
+            if (selected === 1) enqueueCcLED(ALL_KNOBS[selectedKnob], getColourForKnobValue(banks[selectedBank].knobs[selectedKnob].colour, banks[selectedBank].knobs[selectedKnob].value));
+            if (selected === 2) enqueueCcLED(ALL_BUTTONS[selectedButton], banks[selectedBank].buttons[selectedButton].colour);
             return;
         }
         if (item && item.label === 'Name' && cc === CC_JOG_CLICK && val > 63) {
@@ -928,7 +950,7 @@ function handleNote(note, vel) {
             }
         }
         if (padChokeGrp) chokes[padChokeGrp] = noteOut;
-        if (viewMode === VIEW_MAIN && highlightColour != 0) setLED(note, highlightColour);
+        if (viewMode === VIEW_MAIN && highlightColour != 0) enqueueNoteLED(note, highlightColour);
         if (viewMode === VIEW_MAIN && banks[selectedBank].overlay) showPadOverlay(padIdx, velOut);
         needsRedraw = true;
         return;
@@ -951,7 +973,7 @@ function handleNote(note, vel) {
             }
         }
 
-        if (viewMode === VIEW_MAIN && banks[selectedBank].hlcolour != 0) setLED(note, banks[selectedBank].pads[padIdx].colour);
+        if (viewMode === VIEW_MAIN && banks[selectedBank].hlcolour != 0) enqueueNoteLED(note, banks[selectedBank].pads[padIdx].colour);
         needsRedraw = true;
         return;
     }
@@ -1035,6 +1057,9 @@ function tick() {
         drawTextEntry();
         return;
     }
+
+    /* drain up to LED_MSGS_PER_TICK per tick */
+    flushLEDQueue();
 
     /* Periodic state sync and redraw */
     if (tickCount % REDRAW_INTERVAL === 0) {
