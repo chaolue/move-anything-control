@@ -115,6 +115,7 @@ let shiftHeld = false;
 let needsRedraw = true;
 let tickCount = 0;
 const REDRAW_INTERVAL = 6;
+const OVERLAY_DURATION = 750;
 
 /* Colour sweeps */
 const cachedKnobColour = {};
@@ -267,7 +268,7 @@ function showKnobOverlay(knobNum, val = "") {
     }
 
     const displayName = (name !== DEFAULTS.KNOB.NAME) ? name : `Knob: ${knobNum + 1}`;
-    showOverlay(displayName, `${value}  CC: ${cc}`);
+    showOverlay(displayName, `${value}  CC: ${cc}`, OVERLAY_DURATION);
     return true;
 }
 
@@ -279,7 +280,7 @@ function showButtonOverlay(buttonNum, val = "") {
     if (val === 127) value = "On";
     if (val === 0) value = "Off";
     const displayName = (name !== BUTTON_NAMES[buttonNum]) ? name : BUTTON_NAMES[buttonNum];
-    showOverlay(displayName, `${value}  CC: ${cc}`);
+    showOverlay(displayName, `${value}  CC: ${cc}`, OVERLAY_DURATION);
     return true;
 }
 
@@ -289,7 +290,7 @@ function showPadOverlay(padNum, vel) {
     const note = banks[selectedBank].pads[padNum].note;
     const noteInfo = `Note: ${midiNotes[note]} (${note})`;
     const displayName = (name !== DEFAULTS.PAD.NAME) ? name : noteInfo;
-    showOverlay(displayName, `${vel}  Pad: ${padNum + 1}`);
+    showOverlay(displayName, `${vel}  Pad: ${padNum + 1}`, OVERLAY_DURATION);
     return true;
 }
 
@@ -297,7 +298,7 @@ function showPadOverlay(padNum, vel) {
 function showStepOverlay(stepNum) {
     let name = banks[stepNum].name;
     const displayName = (name !== DEFAULTS.BANK.NAME) ? name : `Bank ${stepNum + 1}`;
-    showOverlay("Bank changed", displayName);
+    showOverlay("Bank changed", displayName, OVERLAY_DURATION);
     return true;
 }
 
