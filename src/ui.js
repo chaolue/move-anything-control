@@ -3,22 +3,22 @@
  *
 */
 
-import { setButtonLED, setLED, clearAllLEDs } from '/data/UserData/move-anything/shared/input_filter.mjs';
+import { setButtonLED, setLED, clearAllLEDs } from '/data/UserData/schwung/shared/input_filter.mjs';
 import { MoveBack, MoveMenu, MovePlay, MoveRec, MoveCapture, MoveRecord, MoveLoop, MoveMute, MoveDelete,
          MoveCopy, MoveUndo, MoveShift,MoveUp, MoveDown, MoveLeft, MoveRight, MoveMainKnob, MoveMainButton,
          MoveRow1, MoveRow2, MoveRow3, MoveRow4, MoveKnob1, MoveKnob2, MoveKnob3, MoveKnob4,
          MoveKnob5, MoveKnob6, MoveKnob7, MoveKnob8, MoveMaster, MoveCCButtons,
          White, Black, BrightRed, BrightGreen, OrangeRed, Cyan, DarkGrey, WhiteLedDim, WhiteLedBright,
-         colourNames, MovePads, midiNotes} from '/data/UserData/move-anything/shared/constants.mjs';
+         colourNames, MovePads, midiNotes} from '/data/UserData/schwung/shared/constants.mjs';
 import { drawMenuHeader, showOverlay, tickOverlay, drawOverlay,
-         dismissOverlayOnInput } from '/data/UserData/move-anything/shared/menu_layout.mjs';
-import { createTextScroller } from '/data/UserData/move-anything/shared/text_scroll.mjs';
-import { createValue, createToggle } from '/data/UserData/move-anything/shared/menu_items.mjs';
-import { createMenuState, handleMenuInput } from '/data/UserData/move-anything/shared/menu_nav.mjs';
-import { createMenuStack } from '/data/UserData/move-anything/shared/menu_stack.mjs';
-import { drawStackMenu } from '/data/UserData/move-anything/shared/menu_render.mjs';
+         dismissOverlayOnInput } from '/data/UserData/schwung/shared/menu_layout.mjs';
+import { createTextScroller } from '/data/UserData/schwung/shared/text_scroll.mjs';
+import { createValue, createToggle } from '/data/UserData/schwung/shared/menu_items.mjs';
+import { createMenuState, handleMenuInput } from '/data/UserData/schwung/shared/menu_nav.mjs';
+import { createMenuStack } from '/data/UserData/schwung/shared/menu_stack.mjs';
+import { drawStackMenu } from '/data/UserData/schwung/shared/menu_render.mjs';
 import { openTextEntry, isTextEntryActive, handleTextEntryMidi, drawTextEntry, 
-         tickTextEntry } from '/data/UserData/move-anything/shared/text_entry.mjs';
+         tickTextEntry } from '/data/UserData/schwung/shared/text_entry.mjs';
 
 /* ============================================================================
  * Constants
@@ -67,7 +67,7 @@ let settingsMenuState = null;
 let settingsMenuStack = null;
 
 /*    */
-const CONFIG_LOCATION = "/data/UserData/move-anything/modules/other/control/config.json";
+const CONFIG_LOCATION = "/data/UserData/schwung/modules/other/control/config.json";
 let banks = [];
 let selected = 3;  /* 0 = pad, 1 = knob, 2 = button, 3 = bank */
 let selectedPad = -1;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Control module for Move Anything
+# Build Control module for Schwung
 # This is a JS-only module, so just package the files.
 set -e
 

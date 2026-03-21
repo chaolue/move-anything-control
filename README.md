@@ -1,10 +1,10 @@
-# Custom MIDI controller for Move Everything
+# Custom MIDI controller for Schwung
 
-Customisable MIDI controller for use on Ableton Move with Move Everything installed.
+Customisable MIDI controller for use on Ableton Move with Schwung installed.
 
 ## Prerequisites
 
-- [Move Everything](https://github.com/charlesvestal/move-anything) installed on your Ableton Move
+- [Schwung](https://github.com/charlesvestal/move-anything) installed on your Ableton Move
 
 ## Features
 
@@ -32,5 +32,5 @@ Customisable MIDI controller for use on Ableton Move with Move Everything instal
 ## Usage
 
 1. Connect MIDI device to Move via USB-A or USB-C port
-2. Open Move Everything in standalone mode and open Other -> Custom MIDI Controller
+2. Open Schwung in standalone mode and open Other -> Custom MIDI Controller
 3. Configure Custom MIDI Control (press Menu key) and select a bank, pad, knob or button (it will flash to indicate it is selected)
